@@ -4,10 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/theme/app_design_tokens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
-import '../providers/invoice_list_providers.dart';
 import '../../payments/providers/payment_providers.dart';
+import '../providers/invoice_list_providers.dart';
 
 enum _InvoiceFilter { all, draft, issued, cancelled }
 
@@ -24,15 +25,28 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
   final _searchController = TextEditingController();
 
   String _search = '';
-
-  _InvoiceFilter _filter = _InvoiceFilter.all;
-
+  _InvoiceFilter _invoiceFilter = _InvoiceFilter.all;
   _PaymentFilter _paymentFilter = _PaymentFilter.all;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  bool get _hasFilters =>
+      _search.trim().isNotEmpty ||
+      _invoiceFilter != _InvoiceFilter.all ||
+      _paymentFilter != _PaymentFilter.all;
+
+  void _clearFilters() {
+    _searchController.clear();
+
+    setState(() {
+      _search = '';
+      _invoiceFilter = _InvoiceFilter.all;
+      _paymentFilter = _PaymentFilter.all;
+    });
   }
 
   List<Invoice> _applyFilters(
@@ -42,7 +56,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
     final query = _search.trim().toLowerCase();
 
     return invoices.where((invoice) {
-      final matchesStatus = switch (_filter) {
+      final matchesStatus = switch (_invoiceFilter) {
         _InvoiceFilter.all => true,
         _InvoiceFilter.draft => invoice.status == 'draft',
         _InvoiceFilter.issued => invoice.status == 'issued',
@@ -57,14 +71,11 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
 
       final matchesPayment = switch (_paymentFilter) {
         _PaymentFilter.all => true,
-
         _PaymentFilter.unpaid => invoice.status == 'issued' && paid <= 0,
-
         _PaymentFilter.partial =>
           invoice.status == 'issued' &&
               paid > 0 &&
               paid < invoice.grandTotalPaise,
-
         _PaymentFilter.paid =>
           invoice.status == 'issued' && paid >= invoice.grandTotalPaise,
       };
@@ -92,214 +103,220 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
     return SafeArea(
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Invoices',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.darkText,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Search and manage your invoices.',
-                        style: TextStyle(color: AppTheme.secondaryText),
-                      ),
-                    ],
-                  ),
-                ),
-                FilledButton.icon(
-                  onPressed: () {
-                    context.push('/invoices/new');
-                  },
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('New'),
-                ),
-              ],
-            ),
-          ),
+          _Header(onNewInvoice: () => context.push('/invoices/new')),
 
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: TextField(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: _SearchBox(
               controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search invoice, party, PO or vendor code',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _search.isEmpty
-                    ? null
-                    : IconButton(
-                        onPressed: () {
-                          _searchController.clear();
-
-                          setState(() {
-                            _search = '';
-                          });
-                        },
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-              ),
+              value: _search,
               onChanged: (value) {
                 setState(() {
                   _search = value;
                 });
               },
+              onClear: () {
+                _searchController.clear();
+
+                setState(() {
+                  _search = '';
+                });
+              },
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
 
-          SizedBox(
-            height: 44,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: [
-                _FilterChip(
-                  label: 'All',
-                  selected: _filter == _InvoiceFilter.all,
-                  onTap: () {
-                    setState(() {
-                      _filter = _InvoiceFilter.all;
-                    });
-                  },
-                ),
-                _FilterChip(
-                  label: 'Draft',
-                  selected: _filter == _InvoiceFilter.draft,
-                  onTap: () {
-                    setState(() {
-                      _filter = _InvoiceFilter.draft;
-                    });
-                  },
-                ),
-                _FilterChip(
-                  label: 'Issued',
-                  selected: _filter == _InvoiceFilter.issued,
-                  onTap: () {
-                    setState(() {
-                      _filter = _InvoiceFilter.issued;
-                    });
-                  },
-                ),
-                _FilterChip(
-                  label: 'Cancelled',
-                  selected: _filter == _InvoiceFilter.cancelled,
-                  onTap: () {
-                    setState(() {
-                      _filter = _InvoiceFilter.cancelled;
-                    });
-                  },
-                ),
-              ],
-            ),
+          _FilterSection(
+            title: 'Invoice status',
+            children: [
+              _FilterPill(
+                label: 'All',
+                selected: _invoiceFilter == _InvoiceFilter.all,
+                onTap: () {
+                  setState(() {
+                    _invoiceFilter = _InvoiceFilter.all;
+                  });
+                },
+              ),
+              _FilterPill(
+                label: 'Draft',
+                selected: _invoiceFilter == _InvoiceFilter.draft,
+                onTap: () {
+                  setState(() {
+                    _invoiceFilter = _InvoiceFilter.draft;
+                  });
+                },
+              ),
+              _FilterPill(
+                label: 'Issued',
+                selected: _invoiceFilter == _InvoiceFilter.issued,
+                onTap: () {
+                  setState(() {
+                    _invoiceFilter = _InvoiceFilter.issued;
+                  });
+                },
+              ),
+              _FilterPill(
+                label: 'Cancelled',
+                selected: _invoiceFilter == _InvoiceFilter.cancelled,
+                onTap: () {
+                  setState(() {
+                    _invoiceFilter = _InvoiceFilter.cancelled;
+                  });
+                },
+              ),
+            ],
           ),
 
           const SizedBox(height: 8),
 
-          SizedBox(
-            height: 44,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(right: 8),
-                  child: Center(
-                    child: Text(
-                      'Payment:',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-                _FilterChip(
-                  label: 'All',
-                  selected: _paymentFilter == _PaymentFilter.all,
-                  onTap: () {
-                    setState(() {
-                      _paymentFilter = _PaymentFilter.all;
-                    });
-                  },
-                ),
-                _FilterChip(
-                  label: 'Unpaid',
-                  selected: _paymentFilter == _PaymentFilter.unpaid,
-                  onTap: () {
-                    setState(() {
-                      _paymentFilter = _PaymentFilter.unpaid;
-                    });
-                  },
-                ),
-                _FilterChip(
-                  label: 'Partial',
-                  selected: _paymentFilter == _PaymentFilter.partial,
-                  onTap: () {
-                    setState(() {
-                      _paymentFilter = _PaymentFilter.partial;
-                    });
-                  },
-                ),
-                _FilterChip(
-                  label: 'Paid',
-                  selected: _paymentFilter == _PaymentFilter.paid,
-                  onTap: () {
-                    setState(() {
-                      _paymentFilter = _PaymentFilter.paid;
-                    });
-                  },
-                ),
-              ],
-            ),
+          _FilterSection(
+            title: 'Payment',
+            children: [
+              _FilterPill(
+                label: 'All',
+                selected: _paymentFilter == _PaymentFilter.all,
+                onTap: () {
+                  setState(() {
+                    _paymentFilter = _PaymentFilter.all;
+                  });
+                },
+              ),
+              _FilterPill(
+                label: 'Unpaid',
+                selected: _paymentFilter == _PaymentFilter.unpaid,
+                onTap: () {
+                  setState(() {
+                    _paymentFilter = _PaymentFilter.unpaid;
+                  });
+                },
+              ),
+              _FilterPill(
+                label: 'Partial',
+                selected: _paymentFilter == _PaymentFilter.partial,
+                onTap: () {
+                  setState(() {
+                    _paymentFilter = _PaymentFilter.partial;
+                  });
+                },
+              ),
+              _FilterPill(
+                label: 'Paid',
+                selected: _paymentFilter == _PaymentFilter.paid,
+                onTap: () {
+                  setState(() {
+                    _paymentFilter = _PaymentFilter.paid;
+                  });
+                },
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
+
+          const SizedBox(height: 10),
 
           Expanded(
             child: invoicesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    'Unable to load invoices.\n$error',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+              error: (error, _) => _ErrorState(
+                error: error,
+                onRetry: () {
+                  ref.invalidate(allInvoicesProvider);
+                },
               ),
               data: (invoices) {
                 final filtered = _applyFilters(invoices, paidByInvoice);
 
-                if (filtered.isEmpty) {
-                  return _EmptyInvoices(
-                    hasSearch:
-                        _search.isNotEmpty ||
-                        _filter != _InvoiceFilter.all ||
-                        _paymentFilter != _PaymentFilter.all,
-                  );
-                }
+                return Column(
+                  children: [
+                    _ResultHeader(
+                      count: filtered.length,
+                      hasFilters: _hasFilters,
+                      onClear: _clearFilters,
+                    ),
 
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(allInvoicesProvider);
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? _EmptyState(
+                              filtered: _hasFilters,
+                              onClearFilters: _hasFilters
+                                  ? _clearFilters
+                                  : null,
+                              onNewInvoice: () {
+                                context.push('/invoices/new');
+                              },
+                            )
+                          : RefreshIndicator(
+                              onRefresh: () async {
+                                ref.invalidate(allInvoicesProvider);
+                                ref.invalidate(allPaymentsProvider);
 
-                    await ref.read(allInvoicesProvider.future);
-                  },
-                  child: ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      return _InvoiceCard(invoice: filtered[index]);
-                    },
-                  ),
+                                await Future.wait([
+                                  ref.read(allInvoicesProvider.future),
+                                  ref.read(allPaymentsProvider.future),
+                                ]);
+                              },
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final wide = constraints.maxWidth >= 760;
+
+                                  if (wide) {
+                                    return GridView.builder(
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                      padding: const EdgeInsets.fromLTRB(
+                                        AppSpacing.lg,
+                                        8,
+                                        AppSpacing.lg,
+                                        AppSpacing.xl,
+                                      ),
+                                      gridDelegate:
+                                          const SliverGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: 2,
+                                            crossAxisSpacing: 14,
+                                            mainAxisSpacing: 14,
+                                            mainAxisExtent: 164,
+                                          ),
+                                      itemCount: filtered.length,
+                                      itemBuilder: (context, index) {
+                                        final invoice = filtered[index];
+
+                                        return _InvoiceTile(
+                                          invoice: invoice,
+                                          paidPaise:
+                                              paidByInvoice[invoice.id] ?? 0,
+                                        );
+                                      },
+                                    );
+                                  }
+
+                                  return ListView.separated(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    padding: const EdgeInsets.fromLTRB(
+                                      AppSpacing.lg,
+                                      8,
+                                      AppSpacing.lg,
+                                      AppSpacing.xl,
+                                    ),
+                                    itemCount: filtered.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 10),
+                                    itemBuilder: (context, index) {
+                                      final invoice = filtered[index];
+
+                                      return _InvoiceTile(
+                                        invoice: invoice,
+                                        paidPaise:
+                                            paidByInvoice[invoice.id] ?? 0,
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -310,100 +327,198 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
   }
 }
 
-class _InvoiceCard extends ConsumerWidget {
-  final Invoice invoice;
+// ============================================================================
+// HEADER
+// ============================================================================
 
-  const _InvoiceCard({required this.invoice});
+class _Header extends StatelessWidget {
+  const _Header({required this.onNewInvoice});
+
+  final VoidCallback onNewInvoice;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final date = DateFormat('dd MMM yyyy').format(invoice.invoiceDate);
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Invoices',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Manage billing and payment status',
+                  style: TextStyle(color: AppTheme.secondaryText, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          FilledButton.icon(
+            onPressed: onNewInvoice,
+            icon: const Icon(Icons.add_rounded, size: 19),
+            label: const Text('New'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 17),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-    final amount = NumberFormat.currency(
-      locale: 'en_IN',
-      symbol: '\u20B9',
-      decimalDigits: 2,
-    ).format(MoneyUtils.paiseToRupees(invoice.grandTotalPaise));
+// ============================================================================
+// SEARCH
+// ============================================================================
 
-    final paidByInvoice = ref.watch(paidAmountByInvoiceProvider);
+class _SearchBox extends StatelessWidget {
+  const _SearchBox({
+    required this.controller,
+    required this.value,
+    required this.onChanged,
+    required this.onClear,
+  });
 
-    final paid = paidByInvoice[invoice.id] ?? 0;
+  final TextEditingController controller;
+  final String value;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
 
-    final paymentLabel = invoice.status == 'cancelled'
-        ? null
-        : paid <= 0
-        ? 'UNPAID'
-        : paid >= invoice.grandTotalPaise
-        ? 'PAID'
-        : 'PARTIAL';
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.brandNavy.withValues(alpha: 0.025),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Invoice, party, PO or vendor code',
+          prefixIcon: const Icon(Icons.search_rounded, size: 21),
+          suffixIcon: value.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Clear search',
+                  onPressed: onClear,
+                  icon: const Icon(Icons.close_rounded, size: 19),
+                ),
+        ),
+      ),
+    );
+  }
+}
 
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          context.push('/invoices/${invoice.id}');
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          invoice.invoiceNumber,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          invoice.partyNameSnapshot,
-                          style: const TextStyle(color: AppTheme.secondaryText),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _StatusBadge(status: invoice.status),
-                      if (paymentLabel != null) ...[
-                        const SizedBox(height: 6),
-                        _PaymentBadge(label: paymentLabel),
-                      ],
-                    ],
-                  ),
-                ],
+// ============================================================================
+// FILTERS
+// ============================================================================
+
+class _FilterSection extends StatelessWidget {
+  const _FilterSection({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: Center(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: AppTheme.secondaryText,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.calendar_today_outlined,
-                    size: 15,
-                    color: AppTheme.secondaryText,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    date,
-                    style: const TextStyle(color: AppTheme.secondaryText),
-                  ),
-                  const Spacer(),
-                  Text(
-                    amount,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+            ),
+          ),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterPill extends StatelessWidget {
+  const _FilterPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 7),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? AppTheme.primarySoft : AppTheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(
+              color: selected
+                  ? AppTheme.primary.withValues(alpha: 0.22)
+                  : AppTheme.border,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (selected) ...[
+                const Icon(
+                  Icons.check_rounded,
+                  size: 15,
+                  color: AppTheme.primary,
+                ),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  color: selected
+                      ? AppTheme.primaryDark
+                      : AppTheme.secondaryText,
+                ),
               ),
             ],
           ),
@@ -413,68 +528,346 @@ class _InvoiceCard extends ConsumerWidget {
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  final String status;
+// ============================================================================
+// RESULT HEADER
+// ============================================================================
 
-  const _StatusBadge({required this.status});
+class _ResultHeader extends StatelessWidget {
+  const _ResultHeader({
+    required this.count,
+    required this.hasFilters,
+    required this.onClear,
+  });
+
+  final int count;
+  final bool hasFilters;
+  final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
-    final label = switch (status) {
-      'draft' => 'DRAFT',
-      'issued' => 'ISSUED',
-      'cancelled' => 'CANCELLED',
-      _ => status.toUpperCase(),
-    };
+    final label = count == 1 ? '1 invoice' : '$count invoices';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 4, AppSpacing.lg, 4),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppTheme.secondaryText,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          if (hasFilters)
+            TextButton.icon(
+              onPressed: onClear,
+              icon: const Icon(Icons.restart_alt_rounded, size: 16),
+              label: const Text('Reset'),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+            ),
+        ],
       ),
     );
   }
 }
 
-class _PaymentBadge extends StatelessWidget {
-  final String label;
+// ============================================================================
+// INVOICE TILE
+// ============================================================================
 
-  const _PaymentBadge({required this.label});
+class _InvoiceTile extends StatelessWidget {
+  const _InvoiceTile({required this.invoice, required this.paidPaise});
+
+  final Invoice invoice;
+  final int paidPaise;
 
   @override
   Widget build(BuildContext context) {
-    IconData icon;
+    final date = DateFormat('dd MMM yyyy').format(invoice.invoiceDate);
 
-    switch (label) {
-      case 'PAID':
-        icon = Icons.check_circle_outline;
-        break;
-      case 'PARTIAL':
-        icon = Icons.timelapse_rounded;
-        break;
-      default:
-        icon = Icons.schedule_outlined;
+    final amount = NumberFormat.currency(
+      locale: 'en_IN',
+      symbol: '\u20B9',
+      decimalDigits: 2,
+    ).format(MoneyUtils.paiseToRupees(invoice.grandTotalPaise));
+
+    final paymentState = _paymentStateFor(invoice, paidPaise);
+
+    return Material(
+      color: AppTheme.surface,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: InkWell(
+        onTap: () {
+          context.push('/invoices/${invoice.id}');
+        },
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppTheme.border),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: _invoiceIconBackground(invoice.status),
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: Icon(
+                        Icons.receipt_long_outlined,
+                        size: 20,
+                        color: _invoiceIconColor(invoice.status),
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            invoice.invoiceNumber,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppTheme.darkText,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.15,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            invoice.partyNameSnapshot,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppTheme.secondaryText,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    Text(
+                      amount,
+                      style: const TextStyle(
+                        color: AppTheme.darkText,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.25,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      size: 14,
+                      color: AppTheme.tertiaryText,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      date,
+                      style: const TextStyle(
+                        color: AppTheme.secondaryText,
+                        fontSize: 12,
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    _LifecycleBadge(status: invoice.status),
+
+                    if (paymentState != null) ...[
+                      const SizedBox(width: 6),
+                      _PaymentBadge(state: paymentState),
+                    ],
+
+                    const SizedBox(width: 2),
+
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppTheme.tertiaryText,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  _PaymentState? _paymentStateFor(Invoice invoice, int paid) {
+    if (invoice.status != 'issued') {
+      return null;
     }
 
+    if (paid <= 0) {
+      return _PaymentState.unpaid;
+    }
+
+    if (paid >= invoice.grandTotalPaise) {
+      return _PaymentState.paid;
+    }
+
+    return _PaymentState.partial;
+  }
+
+  Color _invoiceIconBackground(String status) {
+    return switch (status) {
+      'draft' => AppTheme.warningSoft,
+      'cancelled' => AppTheme.dangerSoft,
+      _ => AppTheme.primarySoft,
+    };
+  }
+
+  Color _invoiceIconColor(String status) {
+    return switch (status) {
+      'draft' => AppTheme.warning,
+      'cancelled' => AppTheme.danger,
+      _ => AppTheme.primary,
+    };
+  }
+}
+
+// ============================================================================
+// BADGES
+// ============================================================================
+
+enum _PaymentState { unpaid, partial, paid }
+
+class _LifecycleBadge extends StatelessWidget {
+  const _LifecycleBadge({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final config = switch (status) {
+      'draft' => (
+        label: 'DRAFT',
+        foreground: AppTheme.warning,
+        background: AppTheme.warningSoft,
+      ),
+      'cancelled' => (
+        label: 'CANCELLED',
+        foreground: AppTheme.danger,
+        background: AppTheme.dangerSoft,
+      ),
+      _ => (
+        label: 'ISSUED',
+        foreground: AppTheme.primaryDark,
+        background: AppTheme.primarySoft,
+      ),
+    };
+
+    return _Badge(
+      label: config.label,
+      foreground: config.foreground,
+      background: config.background,
+    );
+  }
+}
+
+class _PaymentBadge extends StatelessWidget {
+  const _PaymentBadge({required this.state});
+
+  final _PaymentState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final config = switch (state) {
+      _PaymentState.unpaid => (
+        label: 'UNPAID',
+        icon: Icons.schedule_rounded,
+        foreground: AppTheme.danger,
+        background: AppTheme.dangerSoft,
+      ),
+      _PaymentState.partial => (
+        label: 'PARTIAL',
+        icon: Icons.timelapse_rounded,
+        foreground: AppTheme.warning,
+        background: AppTheme.warningSoft,
+      ),
+      _PaymentState.paid => (
+        label: 'PAID',
+        icon: Icons.check_circle_rounded,
+        foreground: AppTheme.success,
+        background: AppTheme.successSoft,
+      ),
+    };
+
+    return _Badge(
+      label: config.label,
+      icon: config.icon,
+      foreground: config.foreground,
+      background: config.background,
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge({
+    required this.label,
+    required this.foreground,
+    required this.background,
+    this.icon,
+  });
+
+  final String label;
+  final IconData? icon;
+  final Color foreground;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(20),
+        color: background,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12),
-          const SizedBox(width: 4),
+          if (icon != null) ...[
+            Icon(icon, size: 11, color: foreground),
+            const SizedBox(width: 3),
+          ],
           Text(
             label,
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              color: foreground,
+              fontSize: 9,
+              height: 1,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -482,64 +875,165 @@ class _PaymentBadge extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+// ============================================================================
+// EMPTY / ERROR
+// ============================================================================
 
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.filtered,
+    required this.onNewInvoice,
+    this.onClearFilters,
   });
+
+  final bool filtered;
+  final VoidCallback onNewInvoice;
+  final VoidCallback? onClearFilters;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) {
-          onTap();
-        },
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 66,
+                        height: 66,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primarySoft,
+                          borderRadius: BorderRadius.circular(21),
+                        ),
+                        child: Icon(
+                          filtered
+                              ? Icons.filter_alt_off_rounded
+                              : Icons.receipt_long_outlined,
+                          size: 30,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      Text(
+                        filtered ? 'No matching invoices' : 'No invoices yet',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppTheme.darkText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+
+                      const SizedBox(height: 7),
+
+                      Text(
+                        filtered
+                            ? 'Try changing your search or filters.'
+                            : 'Create your first invoice to start billing.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppTheme.secondaryText,
+                          fontSize: 13,
+                          height: 1.45,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      if (filtered)
+                        OutlinedButton.icon(
+                          onPressed: onClearFilters,
+                          icon: const Icon(Icons.restart_alt_rounded),
+                          label: const Text('Reset filters'),
+                        )
+                      else
+                        FilledButton.icon(
+                          onPressed: onNewInvoice,
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Create invoice'),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-class _EmptyInvoices extends StatelessWidget {
-  final bool hasSearch;
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.error, required this.onRetry});
 
-  const _EmptyInvoices({required this.hasSearch});
+  final Object error;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(30),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.receipt_long_outlined,
-              size: 64,
-              color: AppTheme.secondaryText,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              hasSearch ? 'No matching invoices found' : 'No invoices yet',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              hasSearch
-                  ? 'Try another search or filter.'
-                  : 'Create your first invoice from the New button.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppTheme.secondaryText),
-            ),
-          ],
+        padding: const EdgeInsets.all(28),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 420),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppTheme.dangerSoft,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline_rounded,
+                color: AppTheme.danger,
+                size: 32,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Unable to load invoices',
+                style: TextStyle(
+                  color: AppTheme.darkText,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '$error',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppTheme.secondaryText,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Try again'),
+              ),
+            ],
+          ),
         ),
       ),
     );

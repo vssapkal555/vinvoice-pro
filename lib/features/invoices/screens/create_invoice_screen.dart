@@ -547,119 +547,173 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
       decimalDigits: 2,
     );
 
+    final grandTotal = currency.format(
+      MoneyUtils.paiseToRupees(calculation.grandTotalPaise),
+    );
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('New Invoice'),
-        actions: [
-          TextButton.icon(
-            onPressed: _saving ? null : _saveDraft,
-            icon: const Icon(Icons.save_outlined),
-            label: const Text('Save Draft'),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      backgroundColor: AppTheme.background,
+
+      appBar: AppBar(title: const Text('New Invoice')),
+
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
-          children: [
-            _SectionCard(
-              title: 'Invoice Details',
-              icon: Icons.receipt_long_outlined,
-              child: Column(
-                children: [
-                  _ReadOnlyField(label: 'Invoice No.', value: _invoiceNumber),
-                  const SizedBox(height: 12),
-                  _DateField(
-                    label: 'Invoice Date',
-                    date: _invoiceDate,
-                    onTap: _pickInvoiceDate,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _poNumberController,
-                    decoration: const InputDecoration(labelText: 'PO No.'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _serviceEntryController,
-                    decoration: const InputDecoration(
-                      labelText: 'Service Entry',
-                    ),
-                  ),
-                ],
-              ),
-            ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 900;
 
-            _SectionCard(
-              title: 'Party',
-              icon: Icons.business_outlined,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: _selectParty,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Select Party',
-                    suffixIcon: Icon(Icons.search_rounded),
-                  ),
-                  child: Text(
-                    _party?.partyName ?? 'Search party',
-                    style: TextStyle(
-                      color: _party == null
-                          ? Theme.of(context).hintColor
-                          : null,
-                    ),
+            final formContent = ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(
+                wide ? 28 : 16,
+                8,
+                wide ? 28 : 16,
+                130,
+              ),
+              children: [
+                // =====================================================
+                // INVOICE HERO
+                // =====================================================
+                _InvoiceHero(
+                  invoiceNumber: _invoiceNumber,
+                  invoiceDate: _invoiceDate,
+                  grandTotal: grandTotal,
+                  onDateTap: _pickInvoiceDate,
+                ),
+
+                const SizedBox(height: 18),
+
+                // =====================================================
+                // CUSTOMER
+                // =====================================================
+                _ModernSection(
+                  title: 'Customer',
+                  subtitle: 'Who are you billing?',
+                  icon: Icons.business_outlined,
+                  child: _PartySelector(party: _party, onTap: _selectParty),
+                ),
+
+                // =====================================================
+                // BILLING DETAILS
+                // =====================================================
+                _ModernSection(
+                  title: 'Billing details',
+                  subtitle: 'Reference and vendor information',
+                  icon: Icons.description_outlined,
+                  child: LayoutBuilder(
+                    builder: (context, sectionConstraints) {
+                      final twoColumns = sectionConstraints.maxWidth >= 560;
+
+                      final fields = [
+                        TextFormField(
+                          controller: _poNumberController,
+                          decoration: const InputDecoration(
+                            labelText: 'PO Number',
+                            prefixIcon: Icon(
+                              Icons.confirmation_number_outlined,
+                            ),
+                          ),
+                        ),
+                        TextFormField(
+                          controller: _serviceEntryController,
+                          decoration: const InputDecoration(
+                            labelText: 'Service Entry',
+                            prefixIcon: Icon(Icons.assignment_outlined),
+                          ),
+                        ),
+                        DropdownButtonFormField<VendorCode>(
+                          initialValue: _vendorCode,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Vendor Code',
+                            prefixIcon: Icon(Icons.numbers_rounded),
+                          ),
+                          items: widget.data.vendorCodes.map((vendor) {
+                            return DropdownMenuItem(
+                              value: vendor,
+                              child: Text(vendor.vendorCode),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _vendorCode = value;
+                            });
+                          },
+                        ),
+                        DropdownButtonFormField<Site>(
+                          initialValue: _site,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Site / Plant',
+                            prefixIcon: Icon(Icons.location_on_outlined),
+                          ),
+                          items: widget.data.sites.map((site) {
+                            return DropdownMenuItem(
+                              value: site,
+                              child: Text(site.siteName),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _site = value;
+                            });
+                          },
+                        ),
+                      ];
+
+                      if (!twoColumns) {
+                        return Column(
+                          children: [
+                            for (
+                              var index = 0;
+                              index < fields.length;
+                              index++
+                            ) ...[
+                              fields[index],
+                              if (index < fields.length - 1)
+                                const SizedBox(height: 12),
+                            ],
+                          ],
+                        );
+                      }
+
+                      return Column(
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: fields[0]),
+                              const SizedBox(width: 12),
+                              Expanded(child: fields[1]),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: fields[2]),
+                              const SizedBox(width: 12),
+                              Expanded(child: fields[3]),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
-              ),
-            ),
 
-            _SectionCard(
-              title: 'Vendor & Service',
-              icon: Icons.work_outline_rounded,
-              child: Column(
-                children: [
-                  DropdownButtonFormField<VendorCode>(
-                    initialValue: _vendorCode,
-                    isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Vendor Code'),
-                    items: widget.data.vendorCodes.map((vendor) {
-                      return DropdownMenuItem(
-                        value: vendor,
-                        child: Text(vendor.vendorCode),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _vendorCode = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<Site>(
-                    initialValue: _site,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Site / Plant',
-                    ),
-                    items: widget.data.sites.map((site) {
-                      return DropdownMenuItem(
-                        value: site,
-                        child: Text(site.siteName),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _site = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
+                // =====================================================
+                // SERVICE PERIOD
+                // =====================================================
+                _ModernSection(
+                  title: 'Service period',
+                  subtitle: 'Optional service date range',
+                  icon: Icons.date_range_outlined,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: _DateField(
+                        child: _ModernDateField(
                           label: 'Service From',
                           date: _serviceFrom,
                           onTap: _pickServiceFrom,
@@ -667,7 +721,7 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _DateField(
+                        child: _ModernDateField(
                           label: 'Service To',
                           date: _serviceTo,
                           onTap: _pickServiceTo,
@@ -675,192 +729,148 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            _SectionCard(
-              title: 'Description of Service',
-              icon: Icons.list_alt_rounded,
-              child: Column(
-                children: [
-                  for (var i = 0; i < _items.length; i++)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _InvoiceItemCard(
-                        key: ObjectKey(_items[i]),
-                        serialNo: i + 1,
-                        item: _items[i],
-                        units: widget.data.units,
-                        canRemove: _items.length > 1,
-                        currency: currency,
-                        onChanged: () {
-                          setState(() {});
-                        },
-                        onRemove: () {
-                          _removeItem(i);
-                        },
-                      ),
-                    ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: _addItem,
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('Add Item'),
-                    ),
+                // =====================================================
+                // SERVICES
+                // =====================================================
+                _ModernSection(
+                  title: 'Services',
+                  subtitle:
+                      '${_items.length} service item${_items.length == 1 ? '' : 's'}',
+                  icon: Icons.list_alt_rounded,
+                  trailing: TextButton.icon(
+                    onPressed: _addItem,
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Add'),
                   ),
-                ],
-              ),
-            ),
-
-            _SectionCard(
-              title: 'Tax',
-              icon: Icons.percent_rounded,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SegmentedButton<InvoiceTaxType>(
-                    segments: const [
-                      ButtonSegment(
-                        value: InvoiceTaxType.taxable,
-                        label: Text('Taxable'),
-                      ),
-                      ButtonSegment(
-                        value: InvoiceTaxType.nonTaxable,
-                        label: Text('Non-Taxable'),
-                      ),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < _items.length; i++) ...[
+                        _InvoiceItemCard(
+                          key: ObjectKey(_items[i]),
+                          serialNo: i + 1,
+                          item: _items[i],
+                          units: widget.data.units,
+                          canRemove: _items.length > 1,
+                          currency: currency,
+                          onChanged: () {
+                            setState(() {});
+                          },
+                          onRemove: () {
+                            _removeItem(i);
+                          },
+                        ),
+                        if (i < _items.length - 1) const SizedBox(height: 12),
+                      ],
                     ],
-                    selected: {_taxType},
-                    onSelectionChanged: (value) {
-                      setState(() {
-                        _taxType = value.first;
-                      });
-                    },
                   ),
+                ),
 
-                  if (_taxType == InvoiceTaxType.taxable) ...[
-                    const SizedBox(height: 18),
-                    RadioGroup<InvoiceGstMode>(
-                      groupValue: _gstMode,
-                      onChanged: (value) {
-                        if (value == null) {
-                          return;
-                        }
-
-                        setState(() {
-                          _gstMode = value;
-                        });
-                      },
-                      child: Column(
-                        children: [
-                          RadioListTile<InvoiceGstMode>(
-                            contentPadding: EdgeInsets.zero,
-                            value: InvoiceGstMode.cgstSgst,
-                            title: const Text('CGST + SGST'),
-                            subtitle: Text(
-                              'CGST ${_formatRate(_cgstRate)}% + SGST ${_formatRate(_sgstRate)}%',
-                            ),
+                // =====================================================
+                // TAX
+                // =====================================================
+                _ModernSection(
+                  title: 'Tax',
+                  subtitle: 'Choose invoice tax treatment',
+                  icon: Icons.percent_rounded,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SegmentedButton<InvoiceTaxType>(
+                        segments: const [
+                          ButtonSegment(
+                            value: InvoiceTaxType.taxable,
+                            icon: Icon(Icons.receipt_long_outlined),
+                            label: Text('Taxable'),
                           ),
-                          RadioListTile<InvoiceGstMode>(
-                            contentPadding: EdgeInsets.zero,
-                            value: InvoiceGstMode.igst,
-                            title: const Text('IGST'),
-                            subtitle: Text('IGST ${_formatRate(_igstRate)}%'),
+                          ButtonSegment(
+                            value: InvoiceTaxType.nonTaxable,
+                            icon: Icon(Icons.money_off_csred_outlined),
+                            label: Text('Non-Taxable'),
                           ),
                         ],
+                        selected: {_taxType},
+                        onSelectionChanged: (value) {
+                          setState(() {
+                            _taxType = value.first;
+                          });
+                        },
                       ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
 
-            _SectionCard(
-              title: 'Invoice Summary',
-              icon: Icons.calculate_outlined,
-              child: Column(
-                children: [
-                  _SummaryRow(
-                    label: 'Basic Amount',
-                    value: currency.format(
-                      MoneyUtils.paiseToRupees(calculation.basicAmountPaise),
-                    ),
-                  ),
+                      if (_taxType == InvoiceTaxType.taxable) ...[
+                        const SizedBox(height: 18),
 
-                  if (_taxType == InvoiceTaxType.taxable)
-                    _SummaryRow(
-                      label: 'Taxable Amount',
-                      value: currency.format(
-                        MoneyUtils.paiseToRupees(
-                          calculation.taxableAmountPaise,
+                        const Text(
+                          'GST Type',
+                          style: TextStyle(
+                            color: AppTheme.secondaryText,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                    ),
 
-                  if (_effectiveGstMode == InvoiceGstMode.cgstSgst) ...[
-                    _SummaryRow(
-                      label: 'CGST @ ${_formatRate(calculation.cgstRate)}%',
-                      value: currency.format(
-                        MoneyUtils.paiseToRupees(calculation.cgstAmountPaise),
-                      ),
-                    ),
-                    _SummaryRow(
-                      label: 'SGST @ ${_formatRate(calculation.sgstRate)}%',
-                      value: currency.format(
-                        MoneyUtils.paiseToRupees(calculation.sgstAmountPaise),
-                      ),
-                    ),
-                  ],
+                        const SizedBox(height: 9),
 
-                  if (_effectiveGstMode == InvoiceGstMode.igst)
-                    _SummaryRow(
-                      label: 'IGST @ ${_formatRate(calculation.igstRate)}%',
-                      value: currency.format(
-                        MoneyUtils.paiseToRupees(calculation.igstAmountPaise),
-                      ),
-                    ),
-
-                  const Divider(height: 28),
-
-                  _SummaryRow(
-                    label: 'Grand Total',
-                    value: currency.format(
-                      MoneyUtils.paiseToRupees(calculation.grandTotalPaise),
-                    ),
-                    emphasize: true,
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Amount in Words',
-                          style: Theme.of(context).textTheme.labelMedium,
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          calculation.amountInWords,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _GstModeOption(
+                                title: 'CGST + SGST',
+                                subtitle:
+                                    '${_formatRate(_cgstRate)}% + ${_formatRate(_sgstRate)}%',
+                                selected: _gstMode == InvoiceGstMode.cgstSgst,
+                                onTap: () {
+                                  setState(() {
+                                    _gstMode = InvoiceGstMode.cgstSgst;
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _GstModeOption(
+                                title: 'IGST',
+                                subtitle: '${_formatRate(_igstRate)}%',
+                                selected: _gstMode == InvoiceGstMode.igst,
+                                onTap: () {
+                                  setState(() {
+                                    _gstMode = InvoiceGstMode.igst;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                ],
+                ),
+
+                // =====================================================
+                // SUMMARY
+                // =====================================================
+                _InvoiceSummaryCard(
+                  calculation: calculation,
+                  currency: currency,
+                  taxType: _taxType,
+                  gstMode: _effectiveGstMode,
+                  formatRate: _formatRate,
+                ),
+              ],
+            );
+
+            if (!wide) {
+              return formContent;
+            }
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1000),
+                child: formContent,
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
 
@@ -868,24 +878,68 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            color: AppTheme.surface,
+            border: const Border(top: BorderSide(color: AppTheme.border)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 16,
+                color: AppTheme.brandNavy.withValues(alpha: 0.05),
+                blurRadius: 20,
+                offset: const Offset(0, -6),
               ),
             ],
           ),
-          child: FilledButton.icon(
-            onPressed: _saving ? null : _saveDraft,
-            icon: _saving
-                ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.save_outlined),
-            label: Text(_saving ? 'Saving...' : 'Save Draft'),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Grand Total',
+                      style: TextStyle(
+                        color: AppTheme.secondaryText,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        grandTotal,
+                        style: const TextStyle(
+                          color: AppTheme.darkText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _saveDraft,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(_saving ? 'Saving...' : 'Save Draft'),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -937,7 +991,7 @@ class _EditableInvoiceItem {
   }
 }
 
-class _InvoiceItemCard extends StatelessWidget {
+class _InvoiceItemCard extends StatefulWidget {
   final int serialNo;
   final _EditableInvoiceItem item;
   final List<Unit> units;
@@ -958,170 +1012,331 @@ class _InvoiceItemCard extends StatelessWidget {
   });
 
   @override
+  State<_InvoiceItemCard> createState() => _InvoiceItemCardState();
+}
+
+class _InvoiceItemCardState extends State<_InvoiceItemCard> {
+  late bool _expanded;
+
+  bool get _hasContent =>
+      widget.item.description.text.trim().isNotEmpty ||
+      widget.item.hsnSac.text.trim().isNotEmpty ||
+      widget.item.rateText.text.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Keep the first row ready for immediate entry.
+    // Other empty rows stay compact until tapped.
+    _expanded = widget.serialNo == 1 || _hasContent;
+  }
+
+  void _notifyChanged() {
+    if (!_expanded) {
+      setState(() {
+        _expanded = true;
+      });
+    }
+
+    widget.onChanged();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
+    final amount = widget.currency.format(
+      MoneyUtils.paiseToRupees(widget.item.amountPaise),
+    );
+
+    final filled = _hasContent;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).dividerColor),
-        borderRadius: BorderRadius.circular(14),
+        color: filled ? AppTheme.surface : AppTheme.surfaceSoft,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: filled ? AppTheme.borderStrong : AppTheme.border,
+        ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 15,
-                child: Text(
-                  '$serialNo',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _expanded = !_expanded;
+                });
+              },
+              borderRadius: BorderRadius.circular(18),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primarySoft,
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        widget.serialNo.toString().padLeft(2, '0'),
+                        style: const TextStyle(
+                          color: AppTheme.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 11),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            filled
+                                ? widget.item.description.text.trim().isNotEmpty
+                                      ? widget.item.description.text.trim()
+                                      : 'Service item'
+                                : 'Empty service item',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppTheme.darkText,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+
+                          if (filled) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              amount,
+                              style: const TextStyle(
+                                color: AppTheme.secondaryText,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    if (widget.canRemove)
+                      IconButton(
+                        tooltip: 'Remove',
+                        onPressed: widget.onRemove,
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: AppTheme.tertiaryText,
+                          size: 19,
+                        ),
+                      ),
+
+                    AnimatedRotation(
+                      duration: const Duration(milliseconds: 180),
+                      turns: _expanded ? 0.5 : 0,
+                      child: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.tertiaryText,
+                        size: 23,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Service Item',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-              if (canRemove)
-                IconButton(
-                  tooltip: 'Remove',
-                  onPressed: onRemove,
-                  icon: const Icon(Icons.delete_outline),
-                ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          TextFormField(
-            controller: item.description,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: 'Description of Service',
             ),
-            validator: (value) {
-              if ((value ?? '').trim().isEmpty && item.ratePaise > 0) {
-                return 'Description is required';
-              }
-
-              return null;
-            },
-            onChanged: (_) {
-              onChanged();
-            },
           ),
 
-          const SizedBox(height: 12),
-
-          TextFormField(
-            controller: item.hsnSac,
-            decoration: const InputDecoration(labelText: 'HSN / SAC'),
-          ),
-
-          const SizedBox(height: 12),
-
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: item.quantityText,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d*\.?\d{0,3}'),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: _expanded
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            secondChild: const SizedBox.shrink(),
+            firstChild: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: widget.item.description,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'Description of Service',
+                      prefixIcon: Icon(Icons.description_outlined),
                     ),
-                  ],
-                  decoration: const InputDecoration(labelText: 'QTY'),
-                  validator: (value) {
-                    if (item.description.text.trim().isEmpty) {
+                    validator: (value) {
+                      if ((value ?? '').trim().isEmpty &&
+                          widget.item.ratePaise > 0) {
+                        return 'Description is required';
+                      }
+
                       return null;
-                    }
-
-                    if (item.quantity <= 0) {
-                      return 'Invalid';
-                    }
-
-                    return null;
-                  },
-                  onChanged: (_) {
-                    onChanged();
-                  },
-                ),
-              ),
-
-              const SizedBox(width: 10),
-
-              Expanded(
-                child: DropdownButtonFormField<Unit>(
-                  initialValue: item.unit,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Unit'),
-                  items: units.map((unit) {
-                    return DropdownMenuItem(
-                      value: unit,
-                      child: Text(unit.unitCode),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    item.unit = value;
-                    onChanged();
-                  },
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: item.rateText,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
+                    },
+                    onChanged: (_) {
+                      _notifyChanged();
+                    },
                   ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d*\.?\d{0,2}'),
+
+                  const SizedBox(height: 11),
+
+                  TextFormField(
+                    controller: widget.item.hsnSac,
+                    decoration: const InputDecoration(
+                      labelText: 'HSN / SAC',
+                      prefixIcon: Icon(Icons.tag_outlined),
                     ),
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: 'Rate',
-                    prefixText: '\u20B9 ',
+                    onChanged: (_) {
+                      _notifyChanged();
+                    },
                   ),
-                  onChanged: (_) {
-                    onChanged();
-                  },
-                ),
-              ),
 
-              const SizedBox(width: 10),
+                  const SizedBox(height: 11),
 
-              Expanded(
-                child: InputDecorator(
-                  decoration: const InputDecoration(labelText: 'Amount'),
-                  child: Text(
-                    currency.format(MoneyUtils.paiseToRupees(item.amountPaise)),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: widget.item.quantityText,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,3}'),
+                            ),
+                          ],
+                          decoration: const InputDecoration(labelText: 'Qty'),
+                          validator: (value) {
+                            if (widget.item.description.text.trim().isEmpty) {
+                              return null;
+                            }
+
+                            if (widget.item.quantity <= 0) {
+                              return 'Invalid';
+                            }
+
+                            return null;
+                          },
+                          onChanged: (_) {
+                            _notifyChanged();
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      Expanded(
+                        child: DropdownButtonFormField<Unit>(
+                          initialValue: widget.item.unit,
+                          isExpanded: true,
+                          decoration: const InputDecoration(labelText: 'Unit'),
+                          items: widget.units.map((unit) {
+                            return DropdownMenuItem(
+                              value: unit,
+                              child: Text(unit.unitCode),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            widget.item.unit = value;
+                            _notifyChanged();
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+
+                  const SizedBox(height: 11),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: widget.item.rateText,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,2}'),
+                            ),
+                          ],
+                          decoration: const InputDecoration(
+                            labelText: 'Rate',
+                            prefixText: '\u20B9 ',
+                          ),
+                          onChanged: (_) {
+                            _notifyChanged();
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      Expanded(
+                        child: Container(
+                          constraints: const BoxConstraints(minHeight: 58),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primarySoft,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Amount',
+                                style: TextStyle(
+                                  color: AppTheme.secondaryText,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  amount,
+                                  style: const TextStyle(
+                                    color: AppTheme.primaryDark,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 }
+// ============================================================================
+// PARTY PICKER
+// ============================================================================
 
 class _PartyPickerSheet extends StatefulWidget {
   final List<Party> parties;
@@ -1147,17 +1362,40 @@ class _PartyPickerSheetState extends State<_PartyPickerSheet> {
     }).toList();
 
     return FractionallySizedBox(
-      heightFactor: 0.88,
+      heightFactor: 0.90,
       child: Column(
         children: [
+          Container(
+            width: 42,
+            height: 5,
+            margin: const EdgeInsets.only(top: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.borderStrong,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
             child: Row(
               children: [
-                const Expanded(
-                  child: Text(
-                    'Select Party',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Select Customer',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 3),
+                      const Text(
+                        'Search your saved parties',
+                        style: TextStyle(
+                          color: AppTheme.secondaryText,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
@@ -1175,7 +1413,7 @@ class _PartyPickerSheetState extends State<_PartyPickerSheet> {
             child: TextField(
               autofocus: true,
               decoration: const InputDecoration(
-                hintText: 'Search by party, GSTIN or PAN',
+                hintText: 'Party, GSTIN or PAN',
                 prefixIcon: Icon(Icons.search_rounded),
               ),
               onChanged: (value) {
@@ -1190,37 +1428,97 @@ class _PartyPickerSheetState extends State<_PartyPickerSheet> {
 
           Expanded(
             child: filtered.isEmpty
-                ? const Center(child: Text('No matching party found'))
+                ? const Center(
+                    child: Text(
+                      'No matching party found',
+                      style: TextStyle(color: AppTheme.secondaryText),
+                    ),
+                  )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    separatorBuilder: (_, _) => const SizedBox(height: 6),
                     itemBuilder: (context, index) {
                       final party = filtered[index];
 
-                      return ListTile(
-                        leading: CircleAvatar(
-                          child: Text(
-                            party.partyName.isEmpty
-                                ? '?'
-                                : party.partyName[0].toUpperCase(),
+                      final selected = widget.selectedParty?.id == party.id;
+
+                      return Material(
+                        color: selected
+                            ? AppTheme.primarySoft
+                            : AppTheme.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            Navigator.pop(context, party);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primarySoft,
+                                    borderRadius: BorderRadius.circular(13),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    party.partyName.isEmpty
+                                        ? '?'
+                                        : party.partyName[0].toUpperCase(),
+                                    style: const TextStyle(
+                                      color: AppTheme.primary,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(width: 13),
+
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        party.partyName,
+                                        style: const TextStyle(
+                                          color: AppTheme.darkText,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      if ((party.gstin ?? '').isNotEmpty) ...[
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          'GSTIN ${party.gstin}',
+                                          style: const TextStyle(
+                                            color: AppTheme.secondaryText,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+
+                                if (selected)
+                                  const Icon(
+                                    Icons.check_circle_rounded,
+                                    color: AppTheme.primary,
+                                  )
+                                else
+                                  const Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: AppTheme.tertiaryText,
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                        title: Text(party.partyName),
-                        subtitle: Text(
-                          [
-                            if ((party.gstin ?? '').isNotEmpty)
-                              'GSTIN: ${party.gstin}',
-                            if ((party.pan ?? '').isNotEmpty)
-                              'PAN: ${party.pan}',
-                          ].join('\n'),
-                        ),
-                        trailing: widget.selectedParty?.id == party.id
-                            ? const Icon(Icons.check_circle)
-                            : null,
-                        onTap: () {
-                          Navigator.pop(context, party);
-                        },
                       );
                     },
                   ),
@@ -1231,41 +1529,411 @@ class _PartyPickerSheetState extends State<_PartyPickerSheet> {
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Widget child;
+// ============================================================================
+// CREATE INVOICE UI
+// ============================================================================
 
-  const _SectionCard({
-    required this.title,
-    required this.icon,
-    required this.child,
+class _InvoiceHero extends StatelessWidget {
+  const _InvoiceHero({
+    required this.invoiceNumber,
+    required this.invoiceDate,
+    required this.grandTotal,
+    required this.onDateTap,
   });
+
+  final String invoiceNumber;
+  final DateTime invoiceDate;
+  final String grandTotal;
+  final VoidCallback onDateTap;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: AppTheme.primary),
-                const SizedBox(width: 10),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primaryDark, AppTheme.primary],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'DRAFT INVOICE',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            invoiceNumber,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: onDateTap,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_month_outlined,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            DateFormat('dd MMM yyyy').format(invoiceDate),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Grand Total',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        grandTotal,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModernSection extends StatelessWidget {
+  const _ModernSection({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.child,
+    this.trailing,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppTheme.primary, size: 19),
+              ),
+
+              const SizedBox(width: 11),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppTheme.darkText,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: AppTheme.secondaryText,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              ?trailing,
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _PartySelector extends StatelessWidget {
+  const _PartySelector({required this.party, required this.onTap});
+
+  final Party? party;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = party != null;
+
+    return Material(
+      color: selected ? AppTheme.primarySoft : AppTheme.surfaceSoft,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected
+                  ? AppTheme.primary.withValues(alpha: 0.16)
+                  : AppTheme.border,
             ),
-            const SizedBox(height: 18),
-            child,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: selected ? AppTheme.primary : AppTheme.surfaceMuted,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                alignment: Alignment.center,
+                child: selected
+                    ? Text(
+                        party!.partyName.isEmpty
+                            ? '?'
+                            : party!.partyName[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.business_outlined,
+                        color: AppTheme.secondaryText,
+                      ),
+              ),
+
+              const SizedBox(width: 13),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      selected ? party!.partyName : 'Select customer',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppTheme.darkText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      selected
+                          ? ((party!.gstin ?? '').isNotEmpty
+                                ? 'GSTIN ${party!.gstin}'
+                                : 'Saved party')
+                          : 'Search your saved parties',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppTheme.secondaryText,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.tertiaryText,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ModernDateField extends StatelessWidget {
+  const _ModernDateField({
+    required this.label,
+    required this.date,
+    required this.onTap,
+  });
+
+  final String label;
+  final DateTime? date;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: const Icon(Icons.calendar_month_outlined, size: 19),
+        ),
+        child: Text(
+          date == null ? 'Select' : DateFormat('dd MMM yyyy').format(date!),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: date == null ? AppTheme.tertiaryText : AppTheme.darkText,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GstModeOption extends StatelessWidget {
+  const _GstModeOption({
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(15),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.primarySoft : AppTheme.surfaceSoft,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: selected ? AppTheme.primary : AppTheme.border,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+              color: selected ? AppTheme.primary : AppTheme.tertiaryText,
+              size: 20,
+            ),
+            const SizedBox(height: 7),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: selected ? AppTheme.primaryDark : AppTheme.darkText,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppTheme.secondaryText,
+                fontSize: 10,
+              ),
+            ),
           ],
         ),
       ),
@@ -1273,103 +1941,197 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _ReadOnlyField extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _ReadOnlyField({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return InputDecorator(
-      decoration: InputDecoration(labelText: label, filled: true),
-      child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
-    );
-  }
-}
-
-class _DateField extends StatelessWidget {
-  final String label;
-  final DateTime? date;
-  final VoidCallback onTap;
-
-  const _DateField({
-    required this.label,
-    required this.date,
-    required this.onTap,
+class _InvoiceSummaryCard extends StatelessWidget {
+  const _InvoiceSummaryCard({
+    required this.calculation,
+    required this.currency,
+    required this.taxType,
+    required this.gstMode,
+    required this.formatRate,
   });
 
+  final InvoiceCalculationResult calculation;
+  final NumberFormat currency;
+  final InvoiceTaxType taxType;
+  final InvoiceGstMode gstMode;
+  final String Function(double) formatRate;
+
+  String _money(int paise) {
+    return currency.format(MoneyUtils.paiseToRupees(paise));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          suffixIcon: const Icon(Icons.calendar_month_outlined),
-        ),
-        child: Text(
-          date == null ? 'Select date' : DateFormat('dd-MM-yyyy').format(date!),
-        ),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.brandNavy,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.calculate_outlined,
+                  color: Colors.white,
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: 11),
+              const Expanded(
+                child: Text(
+                  'Invoice Summary',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 17),
+
+          _DarkSummaryRow(
+            label: 'Basic Amount',
+            value: _money(calculation.basicAmountPaise),
+          ),
+
+          if (taxType == InvoiceTaxType.taxable)
+            _DarkSummaryRow(
+              label: 'Taxable Amount',
+              value: _money(calculation.taxableAmountPaise),
+            ),
+
+          if (gstMode == InvoiceGstMode.cgstSgst) ...[
+            _DarkSummaryRow(
+              label: 'CGST @ ${formatRate(calculation.cgstRate)}%',
+              value: _money(calculation.cgstAmountPaise),
+            ),
+            _DarkSummaryRow(
+              label: 'SGST @ ${formatRate(calculation.sgstRate)}%',
+              value: _money(calculation.sgstAmountPaise),
+            ),
+          ],
+
+          if (gstMode == InvoiceGstMode.igst)
+            _DarkSummaryRow(
+              label: 'IGST @ ${formatRate(calculation.igstRate)}%',
+              value: _money(calculation.igstAmountPaise),
+            ),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(color: Colors.white.withValues(alpha: 0.14)),
+          ),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              const Expanded(
+                child: Text(
+                  'Grand Total',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    _money(calculation.grandTotalPaise),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          Container(
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'AMOUNT IN WORDS',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.7,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  calculation.amountInWords,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _SummaryRow extends StatelessWidget {
+class _DarkSummaryRow extends StatelessWidget {
+  const _DarkSummaryRow({required this.label, required this.value});
+
   final String label;
   final String value;
-  final bool emphasize;
-
-  const _SummaryRow({
-    required this.label,
-    required this.value,
-    this.emphasize = false,
-  });
 
   @override
   Widget build(BuildContext context) {
-    final labelStyle = TextStyle(
-      fontSize: emphasize ? 18 : 15,
-      fontWeight: emphasize ? FontWeight.w800 : FontWeight.w500,
-    );
-
-    final valueStyle = TextStyle(
-      fontSize: emphasize ? 18 : 15,
-      fontWeight: emphasize ? FontWeight.w900 : FontWeight.w600,
-    );
-
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                flex: 5,
-                child: Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: labelStyle,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 6,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  textAlign: TextAlign.right,
-                  overflow: TextOverflow.ellipsis,
-                  style: valueStyle,
-                ),
-              ),
-            ],
-          );
-        },
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white60, fontSize: 12),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
