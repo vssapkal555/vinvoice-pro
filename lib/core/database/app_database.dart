@@ -279,6 +279,33 @@ class InvoiceItems extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+class Payments extends Table {
+  TextColumn get id => text().clientDefault(() => _uuid.v4())();
+
+  TextColumn get invoiceId =>
+      text().references(Invoices, #id, onDelete: KeyAction.cascade)();
+
+  IntColumn get amountPaise => integer()();
+
+  DateTimeColumn get paymentDate => dateTime()();
+
+  // cash / bankTransfer / upi / cheque / card / other
+  TextColumn get paymentMode => text()();
+
+  TextColumn get referenceNumber => text().nullable()();
+
+  TextColumn get receivedBy => text().nullable()();
+
+  TextColumn get notes => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().clientDefault(DateTime.now)();
+
+  DateTimeColumn get updatedAt => dateTime().clientDefault(DateTime.now)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 class Notes extends Table {
   TextColumn get id => text().clientDefault(() => _uuid.v4())();
 
@@ -338,6 +365,7 @@ class ImportBatches extends Table {
     TaxRates,
     Invoices,
     InvoiceItems,
+    Payments,
     Notes,
     ImportBatches,
   ],
@@ -346,7 +374,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -354,7 +382,9 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
-      // Future migrations will be added here.
+      if (from < 2) {
+        await m.createTable(payments);
+      }
     },
     beforeOpen: (OpeningDetails details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -853,6 +883,133 @@ class AppDatabase extends _$AppDatabase {
     }
 
     return text;
+  }
+
+  // ---------------------------------------------------------------------------
+  // PAYMENTS
+  // ---------------------------------------------------------------------------
+
+  Stream<List<Payment>> watchAllPayments() {
+    return (select(payments)..orderBy([
+          (row) => OrderingTerm(
+            expression: row.paymentDate,
+            mode: OrderingMode.desc,
+          ),
+          (row) =>
+              OrderingTerm(expression: row.createdAt, mode: OrderingMode.desc),
+        ]))
+        .watch();
+  }
+
+  Stream<List<Payment>> watchPaymentsForInvoice(String invoiceId) {
+    return (select(payments)
+          ..where((row) => row.invoiceId.equals(invoiceId))
+          ..orderBy([
+            (row) => OrderingTerm(
+              expression: row.paymentDate,
+              mode: OrderingMode.desc,
+            ),
+            (row) => OrderingTerm(
+              expression: row.createdAt,
+              mode: OrderingMode.desc,
+            ),
+          ]))
+        .watch();
+  }
+
+  Future<List<Payment>> getPaymentsForInvoice(String invoiceId) {
+    return (select(payments)
+          ..where((row) => row.invoiceId.equals(invoiceId))
+          ..orderBy([
+            (row) => OrderingTerm(
+              expression: row.paymentDate,
+              mode: OrderingMode.desc,
+            ),
+          ]))
+        .get();
+  }
+
+  Future<int> getPaidAmountForInvoice(String invoiceId) async {
+    final rows = await getPaymentsForInvoice(invoiceId);
+
+    return rows.fold<int>(0, (total, payment) => total + payment.amountPaise);
+  }
+
+  Future<int> getOutstandingAmountForInvoice(String invoiceId) async {
+    final invoice = await getInvoiceById(invoiceId);
+
+    if (invoice == null) {
+      throw StateError('Invoice not found.');
+    }
+
+    final paid = await getPaidAmountForInvoice(invoiceId);
+
+    final outstanding = invoice.grandTotalPaise - paid;
+
+    return outstanding < 0 ? 0 : outstanding;
+  }
+
+  Future<void> recordInvoicePayment({
+    required String invoiceId,
+    required int amountPaise,
+    required DateTime paymentDate,
+    required String paymentMode,
+    String? referenceNumber,
+    String? receivedBy,
+    String? notes,
+  }) async {
+    if (amountPaise <= 0) {
+      throw ArgumentError('Payment amount must be greater than zero.');
+    }
+
+    await transaction(() async {
+      final invoice = await getInvoiceById(invoiceId);
+
+      if (invoice == null) {
+        throw StateError('Invoice not found.');
+      }
+
+      if (invoice.status.toLowerCase() == 'cancelled') {
+        throw StateError(
+          'Payments cannot be recorded against a cancelled invoice.',
+        );
+      }
+
+      final existingPayments = await (select(
+        payments,
+      )..where((row) => row.invoiceId.equals(invoiceId))).get();
+
+      final paid = existingPayments.fold<int>(
+        0,
+        (total, payment) => total + payment.amountPaise,
+      );
+
+      final outstanding = invoice.grandTotalPaise - paid;
+
+      if (outstanding <= 0) {
+        throw StateError('This invoice is already fully paid.');
+      }
+
+      if (amountPaise > outstanding) {
+        throw StateError('Payment amount cannot exceed invoice outstanding.');
+      }
+
+      await into(payments).insert(
+        PaymentsCompanion.insert(
+          invoiceId: invoiceId,
+          amountPaise: amountPaise,
+          paymentDate: paymentDate,
+          paymentMode: paymentMode,
+          referenceNumber: Value(_nullableImportText(referenceNumber)),
+          receivedBy: Value(_nullableImportText(receivedBy)),
+          notes: Value(_nullableImportText(notes)),
+        ),
+      );
+    });
+  }
+
+  Future<void> deleteInvoicePayment(String paymentId) {
+    return (delete(payments)..where((row) => row.id.equals(paymentId))).go();
   }
   // ---------------------------------------------------------------------------
   // EXCEL IMPORT

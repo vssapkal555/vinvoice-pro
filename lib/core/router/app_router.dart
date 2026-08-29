@@ -13,6 +13,7 @@ import '../../features/masters/screens/units_screen.dart';
 import '../../features/masters/screens/vendor_codes_screen.dart';
 import '../../features/parties/screens/parties_screen.dart';
 import '../../features/pdf/screens/invoice_pdf_preview_screen.dart';
+import '../../features/payments/screens/record_payment_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/login',
@@ -27,6 +28,11 @@ final GoRouter appRouter = GoRouter(
       path: '/invoices/:id/edit',
       builder: (context, state) =>
           EditInvoiceScreen(invoiceId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/invoices/:id/payment',
+      builder: (context, state) =>
+          RecordPaymentScreen(invoiceId: state.pathParameters['id']!),
     ),
     GoRoute(
       path: '/invoices/:id/pdf',

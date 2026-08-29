@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../payments/providers/payment_providers.dart';
+import '../../payments/data/payment_formatters.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
@@ -236,6 +238,11 @@ class _InvoiceDetailContent extends StatelessWidget {
         _ItemsSection(items: detail.items, currency: currency),
 
         _TaxSummary(invoice: invoice, currency: currency),
+
+        _InvoicePaymentCard(
+          invoiceId: invoice.id,
+          invoiceStatus: invoice.status,
+        ),
 
         _Section(
           title: 'Amount in Words',
@@ -705,6 +712,184 @@ class _InvoicePdfActionsBar extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _InvoicePaymentCard extends ConsumerWidget {
+  final String invoiceId;
+  final String invoiceStatus;
+
+  const _InvoicePaymentCard({
+    required this.invoiceId,
+    required this.invoiceStatus,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summaryAsync = ref.watch(invoicePaymentSummaryProvider(invoiceId));
+
+    final paymentsAsync = ref.watch(invoicePaymentsProvider(invoiceId));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Payments & Outstanding',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+
+            const SizedBox(height: 14),
+
+            summaryAsync.when(
+              loading: () => const LinearProgressIndicator(),
+              error: (error, stack) =>
+                  Text('Unable to load payment summary.\n$error'),
+              data: (summary) {
+                return Column(
+                  children: [
+                    _PaymentSummaryRow(
+                      label: 'Invoice Total',
+                      value:
+                          '\u20B9${MoneyUtils.paiseToRupeesText(summary.invoiceTotalPaise)}',
+                    ),
+                    _PaymentSummaryRow(
+                      label: 'Paid',
+                      value:
+                          '\u20B9${MoneyUtils.paiseToRupeesText(summary.paidPaise)}',
+                    ),
+                    _PaymentSummaryRow(
+                      label: 'Outstanding',
+                      value:
+                          '\u20B9${MoneyUtils.paiseToRupeesText(summary.outstandingPaise)}',
+                      emphasize: true,
+                    ),
+                    _PaymentSummaryRow(
+                      label: 'Payment Status',
+                      value: paymentStateLabel(summary.state),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    if (invoiceStatus.toLowerCase() != 'cancelled' &&
+                        summary.outstandingPaise > 0)
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () async {
+                            await context.push('/invoices/$invoiceId/payment');
+
+                            ref.invalidate(
+                              invoicePaymentSummaryProvider(invoiceId),
+                            );
+
+                            ref.invalidate(invoicePaymentsProvider(invoiceId));
+                          },
+                          icon: const Icon(Icons.payments_outlined),
+                          label: const Text('Record Payment'),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            const Divider(),
+
+            const SizedBox(height: 8),
+
+            const Text(
+              'Payment History',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+
+            const SizedBox(height: 8),
+
+            paymentsAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: LinearProgressIndicator(),
+              ),
+              error: (error, stack) =>
+                  Text('Unable to load payment history.\n$error'),
+              data: (payments) {
+                if (payments.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text('No payments recorded.'),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    for (final payment in payments)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.currency_rupee_rounded),
+                        ),
+                        title: Text(
+                          '\u20B9${MoneyUtils.paiseToRupeesText(payment.amountPaise)}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        subtitle: Text(
+                          '${DateFormat('dd-MM-yyyy').format(payment.paymentDate)}'
+                          ' \u2022 ${paymentModeLabel(payment.paymentMode)}'
+                          '${payment.referenceNumber == null ? '' : ' \u2022 ${payment.referenceNumber}'}',
+                        ),
+                        trailing: payment.receivedBy == null
+                            ? null
+                            : Text(payment.receivedBy!),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentSummaryRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool emphasize;
+
+  const _PaymentSummaryRow({
+    required this.label,
+    required this.value,
+    this.emphasize = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: emphasize ? FontWeight.w800 : FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
 import '../../invoices/providers/invoice_list_providers.dart';
 import '../../parties/providers/party_providers.dart';
+import '../../payments/providers/payment_providers.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -14,6 +15,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final invoicesAsync = ref.watch(allInvoicesProvider);
+    final paidByInvoice = ref.watch(paidAmountByInvoiceProvider);
 
     final partiesAsync = ref.watch(partiesProvider);
 
@@ -150,6 +152,36 @@ class DashboardScreen extends ConsumerWidget {
                   (total, invoice) => total + invoice.grandTotalPaise,
                 );
 
+                final collectedPaise = dashboardInvoices.fold<int>(0, (
+                  total,
+                  invoice,
+                ) {
+                  final paid = paidByInvoice[invoice.id] ?? 0;
+
+                  return total +
+                      (paid > invoice.grandTotalPaise
+                          ? invoice.grandTotalPaise
+                          : paid);
+                });
+
+                final outstandingPaise = totalPaise - collectedPaise;
+
+                var unpaidCount = 0;
+                var partialCount = 0;
+                var paidCount = 0;
+
+                for (final invoice in dashboardInvoices) {
+                  final paid = paidByInvoice[invoice.id] ?? 0;
+
+                  if (paid <= 0) {
+                    unpaidCount++;
+                  } else if (paid >= invoice.grandTotalPaise) {
+                    paidCount++;
+                  } else {
+                    partialCount++;
+                  }
+                }
+
                 final partyCount = partiesAsync.maybeWhen(
                   data: (parties) => parties.length,
                   orElse: () => 0,
@@ -178,11 +210,61 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     _WideStatCard(
-                      title: 'Total Invoice Value',
+                      title: 'Total Invoiced',
                       value: currency.format(
                         MoneyUtils.paiseToRupees(totalPaise),
                       ),
-                      icon: Icons.currency_rupee,
+                      icon: Icons.receipt_long_outlined,
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    _WideStatCard(
+                      title: 'Total Collected',
+                      value: currency.format(
+                        MoneyUtils.paiseToRupees(collectedPaise),
+                      ),
+                      icon: Icons.payments_outlined,
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    _WideStatCard(
+                      title: 'Total Outstanding',
+                      value: currency.format(
+                        MoneyUtils.paiseToRupees(outstandingPaise),
+                      ),
+                      icon: Icons.account_balance_wallet_outlined,
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _StatCard(
+                            title: 'Unpaid',
+                            value: '$unpaidCount',
+                            icon: Icons.schedule_outlined,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _StatCard(
+                            title: 'Partial',
+                            value: '$partialCount',
+                            icon: Icons.timelapse_rounded,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _StatCard(
+                            title: 'Paid',
+                            value: '$paidCount',
+                            icon: Icons.check_circle_outline,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 );

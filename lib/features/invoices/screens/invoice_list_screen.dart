@@ -7,8 +7,11 @@ import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
 import '../providers/invoice_list_providers.dart';
+import '../../payments/providers/payment_providers.dart';
 
 enum _InvoiceFilter { all, draft, issued, cancelled }
+
+enum _PaymentFilter { all, unpaid, partial, paid }
 
 class InvoiceListScreen extends ConsumerStatefulWidget {
   const InvoiceListScreen({super.key});
@@ -24,13 +27,18 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
 
   _InvoiceFilter _filter = _InvoiceFilter.all;
 
+  _PaymentFilter _paymentFilter = _PaymentFilter.all;
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
-  List<Invoice> _applyFilters(List<Invoice> invoices) {
+  List<Invoice> _applyFilters(
+    List<Invoice> invoices,
+    Map<String, int> paidByInvoice,
+  ) {
     final query = _search.trim().toLowerCase();
 
     return invoices.where((invoice) {
@@ -42,6 +50,26 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
       };
 
       if (!matchesStatus) {
+        return false;
+      }
+
+      final paid = paidByInvoice[invoice.id] ?? 0;
+
+      final matchesPayment = switch (_paymentFilter) {
+        _PaymentFilter.all => true,
+
+        _PaymentFilter.unpaid => invoice.status == 'issued' && paid <= 0,
+
+        _PaymentFilter.partial =>
+          invoice.status == 'issued' &&
+              paid > 0 &&
+              paid < invoice.grandTotalPaise,
+
+        _PaymentFilter.paid =>
+          invoice.status == 'issued' && paid >= invoice.grandTotalPaise,
+      };
+
+      if (!matchesPayment) {
         return false;
       }
 
@@ -59,6 +87,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
   @override
   Widget build(BuildContext context) {
     final invoicesAsync = ref.watch(allInvoicesProvider);
+    final paidByInvoice = ref.watch(paidAmountByInvoiceProvider);
 
     return SafeArea(
       child: Column(
@@ -174,6 +203,62 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
             ),
           ),
 
+          const SizedBox(height: 8),
+
+          SizedBox(
+            height: 44,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: Center(
+                    child: Text(
+                      'Payment:',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                _FilterChip(
+                  label: 'All',
+                  selected: _paymentFilter == _PaymentFilter.all,
+                  onTap: () {
+                    setState(() {
+                      _paymentFilter = _PaymentFilter.all;
+                    });
+                  },
+                ),
+                _FilterChip(
+                  label: 'Unpaid',
+                  selected: _paymentFilter == _PaymentFilter.unpaid,
+                  onTap: () {
+                    setState(() {
+                      _paymentFilter = _PaymentFilter.unpaid;
+                    });
+                  },
+                ),
+                _FilterChip(
+                  label: 'Partial',
+                  selected: _paymentFilter == _PaymentFilter.partial,
+                  onTap: () {
+                    setState(() {
+                      _paymentFilter = _PaymentFilter.partial;
+                    });
+                  },
+                ),
+                _FilterChip(
+                  label: 'Paid',
+                  selected: _paymentFilter == _PaymentFilter.paid,
+                  onTap: () {
+                    setState(() {
+                      _paymentFilter = _PaymentFilter.paid;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 6),
 
           Expanded(
@@ -189,12 +274,14 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                 ),
               ),
               data: (invoices) {
-                final filtered = _applyFilters(invoices);
+                final filtered = _applyFilters(invoices, paidByInvoice);
 
                 if (filtered.isEmpty) {
                   return _EmptyInvoices(
                     hasSearch:
-                        _search.isNotEmpty || _filter != _InvoiceFilter.all,
+                        _search.isNotEmpty ||
+                        _filter != _InvoiceFilter.all ||
+                        _paymentFilter != _PaymentFilter.all,
                   );
                 }
 
@@ -223,13 +310,13 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
   }
 }
 
-class _InvoiceCard extends StatelessWidget {
+class _InvoiceCard extends ConsumerWidget {
   final Invoice invoice;
 
   const _InvoiceCard({required this.invoice});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final date = DateFormat('dd MMM yyyy').format(invoice.invoiceDate);
 
     final amount = NumberFormat.currency(
@@ -237,6 +324,18 @@ class _InvoiceCard extends StatelessWidget {
       symbol: '\u20B9',
       decimalDigits: 2,
     ).format(MoneyUtils.paiseToRupees(invoice.grandTotalPaise));
+
+    final paidByInvoice = ref.watch(paidAmountByInvoiceProvider);
+
+    final paid = paidByInvoice[invoice.id] ?? 0;
+
+    final paymentLabel = invoice.status == 'cancelled'
+        ? null
+        : paid <= 0
+        ? 'UNPAID'
+        : paid >= invoice.grandTotalPaise
+        ? 'PAID'
+        : 'PARTIAL';
 
     return Card(
       child: InkWell(
@@ -271,7 +370,16 @@ class _InvoiceCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  _StatusBadge(status: invoice.status),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _StatusBadge(status: invoice.status),
+                      if (paymentLabel != null) ...[
+                        const SizedBox(height: 6),
+                        _PaymentBadge(label: paymentLabel),
+                      ],
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -328,6 +436,47 @@ class _StatusBadge extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+}
+
+class _PaymentBadge extends StatelessWidget {
+  final String label;
+
+  const _PaymentBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    IconData icon;
+
+    switch (label) {
+      case 'PAID':
+        icon = Icons.check_circle_outline;
+        break;
+      case 'PARTIAL':
+        icon = Icons.timelapse_rounded;
+        break;
+      default:
+        icon = Icons.schedule_outlined;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+          ),
+        ],
       ),
     );
   }
