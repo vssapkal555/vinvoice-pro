@@ -7,117 +7,160 @@ import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../company/providers/company_providers.dart';
 import '../providers/site_providers.dart';
+import '../widgets/master_data_ui.dart';
 
-class SitesScreen extends ConsumerWidget {
+class SitesScreen extends ConsumerStatefulWidget {
   const SitesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final sitesAsync = ref.watch(sitesProvider);
+  ConsumerState<SitesScreen> createState() => _SitesScreenState();
+}
+
+class _SitesScreenState extends ConsumerState<SitesScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(sitesProvider);
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('Sites / Plants')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          _openForm(context, ref);
-        },
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Site'),
-      ),
-      body: sitesAsync.when(
+      body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text(
-            'Unable to load sites.\n$error',
-            textAlign: TextAlign.center,
-          ),
+        error: (error, stack) => MasterError(
+          title: 'Unable to load sites',
+          error: error.toString(),
+          onRetry: () => ref.invalidate(sitesProvider),
         ),
-        data: (sites) {
-          if (sites.isEmpty) {
-            return const Center(child: Text('No sites found'));
-          }
+        data: (records) {
+          final q = _query.trim().toLowerCase();
 
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-            itemCount: sites.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final site = sites[index];
+          final filtered = records.where((record) {
+            if (q.isEmpty) return true;
 
-              return Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.location_on_outlined),
-                  ),
-                  title: Text(
-                    site.siteName,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    (site.siteCode ?? '').isEmpty
-                        ? 'No site code'
-                        : 'Code: ${site.siteCode}',
-                  ),
-                  trailing: Switch(
-                    value: site.isActive,
-                    onChanged: (value) async {
-                      final db = ref.read(appDatabaseProvider);
+            return record.siteName.toLowerCase().contains(q) ||
+                (record.siteCode ?? '').toLowerCase().contains(q);
+          }).toList();
 
-                      await db.updateSiteRecord(
-                        SitesCompanion(
-                          id: Value(site.id),
-                          isActive: Value(value),
-                        ),
-                      );
-                    },
-                  ),
-                  onTap: () {
-                    _openForm(context, ref, site: site);
+          final active = records.where((e) => e.isActive).length;
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(sitesProvider);
+              await ref.read(sitesProvider.future);
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+              children: [
+                MasterHero(
+                  title: 'Sites / Plants',
+                  subtitle: 'Customer sites and service locations',
+                  icon: Icons.location_on_outlined,
+                  total: records.length,
+                  active: active,
+                  onAdd: () => _openForm(context),
+                ),
+                const SizedBox(height: 16),
+                MasterSearch(
+                  controller: _searchController,
+                  hint: 'Search site name or code',
+                  query: _query,
+                  onChanged: (value) {
+                    setState(() => _query = value);
+                  },
+                  onClear: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
                   },
                 ),
-              );
-            },
+                const SizedBox(height: 18),
+                MasterResultHeader(
+                  title: 'Sites / Plants',
+                  count: filtered.length,
+                ),
+                const SizedBox(height: 10),
+                if (records.isEmpty)
+                  MasterEmptyState(
+                    icon: Icons.location_on_outlined,
+                    title: 'No sites yet',
+                    message:
+                        'Add customer sites or plant locations used on invoices.',
+                    buttonLabel: 'Add Site',
+                    onAdd: () => _openForm(context),
+                  )
+                else if (filtered.isEmpty)
+                  const MasterNoMatches()
+                else
+                  ...filtered.map(
+                    (record) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: MasterRecordCard(
+                        icon: Icons.location_on_outlined,
+                        title: record.siteName,
+                        subtitle: (record.siteCode ?? '').trim().isEmpty
+                            ? 'No site code'
+                            : 'Code: ${record.siteCode}',
+                        active: record.isActive,
+                        onTap: () => _openForm(context, site: record),
+                        onActiveChanged: (value) async {
+                          await ref
+                              .read(appDatabaseProvider)
+                              .updateSiteRecord(
+                                SitesCompanion(
+                                  id: Value(record.id),
+                                  isActive: Value(value),
+                                ),
+                              );
+                        },
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           );
         },
       ),
     );
   }
 
-  Future<void> _openForm(
-    BuildContext context,
-    WidgetRef ref, {
-    Site? site,
-  }) async {
+  Future<void> _openForm(BuildContext context, {Site? site}) async {
     final company = await ref.read(primaryCompanyProvider.future);
 
-    if (company == null || !context.mounted) {
-      return;
-    }
+    if (company == null || !context.mounted) return;
 
-    await showModalBottomSheet(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => _SiteForm(companyId: company.id, site: site),
+      backgroundColor: AppTheme.surface,
+      builder: (_) => _SiteForm(companyId: company.id, site: site),
     );
+
+    ref.invalidate(sitesProvider);
   }
 }
 
 class _SiteForm extends ConsumerStatefulWidget {
+  const _SiteForm({required this.companyId, this.site});
+
   final String companyId;
   final Site? site;
-
-  const _SiteForm({required this.companyId, this.site});
 
   @override
   ConsumerState<_SiteForm> createState() => _SiteFormState();
 }
 
 class _SiteFormState extends ConsumerState<_SiteForm> {
+  final _formKey = GlobalKey<FormState>();
+
   late final TextEditingController _name;
   late final TextEditingController _code;
 
@@ -140,16 +183,9 @@ class _SiteFormState extends ConsumerState<_SiteForm> {
   }
 
   Future<void> _save() async {
-    if (_name.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Site name is required')));
-      return;
-    }
+    if (_saving || !_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _saving = true;
-    });
+    setState(() => _saving = true);
 
     try {
       final db = ref.read(appDatabaseProvider);
@@ -172,55 +208,46 @@ class _SiteFormState extends ConsumerState<_SiteForm> {
         );
       }
 
-      if (!mounted) return;
-
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     } finally {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-        });
-      }
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.site == null ? 'Add Site / Plant' : 'Edit Site / Plant',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.darkText,
+    return MasterFormShell(
+      title: widget.site == null ? 'New Site / Plant' : 'Edit Site / Plant',
+      subtitle: 'Location used for service billing',
+      icon: Icons.location_on_outlined,
+      saving: _saving,
+      saveLabel: widget.site == null ? 'Save Site' : 'Update Site',
+      onSave: _save,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            TextFormField(
+              controller: _name,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Site / Plant Name',
+                prefixIcon: Icon(Icons.location_city_outlined),
+              ),
+              validator: (value) =>
+                  (value ?? '').trim().isEmpty ? 'Site name is required' : null,
             ),
-          ),
-          const SizedBox(height: 18),
-          TextField(
-            controller: _name,
-            decoration: const InputDecoration(labelText: 'Site / Plant Name'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _code,
-            decoration: const InputDecoration(labelText: 'Site Code'),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _saving ? null : _save,
-            child: Text(_saving ? 'Saving...' : 'Save Site'),
-          ),
-        ],
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _code,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Site Code',
+                prefixIcon: Icon(Icons.qr_code_rounded),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

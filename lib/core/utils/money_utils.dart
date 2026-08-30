@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 class MoneyUtils {
   const MoneyUtils._();
 
@@ -52,6 +54,12 @@ class MoneyUtils {
   }
 
   static String paiseToRupeesText(int paise) {
-    return (paise / 100).toStringAsFixed(2);
+    final value = paise / 100;
+
+    return NumberFormat.currency(
+      locale: 'en_IN',
+      symbol: '',
+      decimalDigits: 2,
+    ).format(value).trim();
   }
 }

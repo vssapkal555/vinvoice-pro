@@ -579,7 +579,13 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> updateCompanyRecord(CompaniesCompanion companion) {
-    return update(companies).write(companion);
+    if (!companion.id.present) {
+      throw ArgumentError('Company id is required when updating a company.');
+    }
+
+    return (update(
+      companies,
+    )..where((row) => row.id.equals(companion.id.value))).write(companion);
   }
 
   Future<List<Party>> getPartiesForCompany(String companyId) {
@@ -601,7 +607,13 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> updatePartyRecord(PartiesCompanion companion) {
-    return update(parties).write(companion);
+    if (!companion.id.present) {
+      throw ArgumentError('Party id is required when updating a party.');
+    }
+
+    return (update(
+      parties,
+    )..where((row) => row.id.equals(companion.id.value))).write(companion);
   }
 
   Future<List<VendorCode>> getVendorCodesForCompany(String companyId) {
@@ -623,7 +635,15 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> updateVendorCodeRecord(VendorCodesCompanion companion) {
-    return update(vendorCodes).write(companion);
+    if (!companion.id.present) {
+      throw ArgumentError(
+        'Vendor code id is required when updating a vendor code.',
+      );
+    }
+
+    return (update(
+      vendorCodes,
+    )..where((row) => row.id.equals(companion.id.value))).write(companion);
   }
 
   // ---------------------------------------------------------------------------
@@ -642,7 +662,13 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> updateSiteRecord(SitesCompanion companion) {
-    return update(sites).write(companion);
+    if (!companion.id.present) {
+      throw ArgumentError('Site id is required when updating a site.');
+    }
+
+    return (update(
+      sites,
+    )..where((row) => row.id.equals(companion.id.value))).write(companion);
   }
 
   Stream<List<Unit>> watchUnitsForCompany(String companyId) {
@@ -659,7 +685,13 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> updateUnitRecord(UnitsCompanion companion) {
-    return update(units).write(companion);
+    if (!companion.id.present) {
+      throw ArgumentError('Unit id is required when updating a unit.');
+    }
+
+    return (update(
+      units,
+    )..where((row) => row.id.equals(companion.id.value))).write(companion);
   }
 
   Stream<List<TaxRate>> watchTaxRatesForCompany(String companyId) {
@@ -676,7 +708,13 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> updateTaxRateRecord(TaxRatesCompanion companion) {
-    return update(taxRates).write(companion);
+    if (!companion.id.present) {
+      throw ArgumentError('Tax rate id is required when updating a tax rate.');
+    }
+
+    return (update(
+      taxRates,
+    )..where((row) => row.id.equals(companion.id.value))).write(companion);
   }
 
   // ---------------------------------------------------------------------------
@@ -886,6 +924,41 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // ---------------------------------------------------------------------------
+  // NOTES
+  // ---------------------------------------------------------------------------
+
+  Stream<List<Note>> watchNotesForCompany(String companyId) {
+    return (select(notes)
+          ..where((row) => row.companyId.equals(companyId))
+          ..orderBy([
+            (row) =>
+                OrderingTerm(expression: row.isPinned, mode: OrderingMode.desc),
+            (row) => OrderingTerm(
+              expression: row.updatedAt,
+              mode: OrderingMode.desc,
+            ),
+          ]))
+        .watch();
+  }
+
+  Future<void> insertNoteRecord(NotesCompanion companion) {
+    return into(notes).insert(companion);
+  }
+
+  Future<void> updateNoteRecord(NotesCompanion companion) {
+    if (!companion.id.present) {
+      throw ArgumentError('Note id is required when updating a note.');
+    }
+
+    return (update(
+      notes,
+    )..where((row) => row.id.equals(companion.id.value))).write(companion);
+  }
+
+  Future<void> deleteNoteRecord(String noteId) {
+    return (delete(notes)..where((row) => row.id.equals(noteId))).go();
+  }
+  // ---------------------------------------------------------------------------
   // PAYMENTS
   // ---------------------------------------------------------------------------
 
@@ -969,9 +1042,9 @@ class AppDatabase extends _$AppDatabase {
         throw StateError('Invoice not found.');
       }
 
-      if (invoice.status.toLowerCase() == 'cancelled') {
+      if (invoice.status.toLowerCase() != 'issued') {
         throw StateError(
-          'Payments cannot be recorded against a cancelled invoice.',
+          'Payments can only be recorded against issued invoices.',
         );
       }
 

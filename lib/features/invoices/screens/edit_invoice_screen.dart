@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
+import '../../../core/theme/app_design_tokens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
 import '../data/invoice_calculator.dart';
@@ -554,10 +555,16 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
       decimalDigits: 2,
     );
 
+    final grandTotal = currency.format(
+      MoneyUtils.paiseToRupees(result.grandTotalPaise),
+    );
+
     return PopScope(
       canPop: !_dirty,
       onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
+        if (didPop) {
+          return;
+        }
 
         final discard = await _confirmDiscard();
 
@@ -566,137 +573,184 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Edit Draft'),
-          actions: [
-            TextButton.icon(
-              onPressed: _saving ? null : _save,
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Save'),
-            ),
-          ],
-        ),
+        backgroundColor: AppTheme.background,
+        appBar: AppBar(title: const Text('Edit Draft')),
         body: Form(
           key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 130),
-            children: [
-              _CardSection(
-                title: 'Invoice Details',
-                icon: Icons.receipt_long_outlined,
-                child: Column(
-                  children: [
-                    InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Invoice No.',
-                        filled: true,
-                      ),
-                      child: Text(
-                        _invoice.invoiceNumber,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _EditDateField(
-                      label: 'Invoice Date',
-                      date: _invoiceDate,
-                      onTap: _pickInvoiceDate,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _poController,
-                      decoration: const InputDecoration(labelText: 'PO No.'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _serviceEntryController,
-                      decoration: const InputDecoration(
-                        labelText: 'Service Entry',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = constraints.maxWidth >= 900;
 
-              _CardSection(
-                title: 'Party',
-                icon: Icons.business_outlined,
-                child: DropdownButtonFormField<Party>(
-                  initialValue: _party,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Party'),
-                  items: widget.data.parties.map((party) {
-                    return DropdownMenuItem(
-                      value: party,
-                      child: Text(party.partyName),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _party = value;
-                      _dirty = true;
-                    });
-                  },
+              final content = ListView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.fromLTRB(
+                  wide ? 28 : AppSpacing.md,
+                  8,
+                  wide ? 28 : AppSpacing.md,
+                  130,
                 ),
-              ),
+                children: [
+                  _EditInvoiceHero(
+                    invoiceNumber: _invoice.invoiceNumber,
+                    invoiceDate: _invoiceDate,
+                    grandTotal: grandTotal,
+                    dirty: _dirty,
+                    onDateTap: _pickInvoiceDate,
+                  ),
 
-              _CardSection(
-                title: 'Vendor & Service',
-                icon: Icons.work_outline_rounded,
-                child: Column(
-                  children: [
-                    DropdownButtonFormField<VendorCode>(
-                      initialValue: _vendorCode,
+                  const SizedBox(height: 18),
+
+                  _EditSection(
+                    title: 'Customer',
+                    subtitle: 'Who is this invoice for?',
+                    icon: Icons.business_outlined,
+                    child: DropdownButtonFormField<Party>(
+                      initialValue: _party,
                       isExpanded: true,
                       decoration: const InputDecoration(
-                        labelText: 'Vendor Code',
+                        labelText: 'Customer',
+                        prefixIcon: Icon(Icons.business_outlined),
                       ),
-                      items: widget.data.vendorCodes.map((vendor) {
+                      items: widget.data.parties.map((party) {
                         return DropdownMenuItem(
-                          value: vendor,
-                          child: Text(vendor.vendorCode),
+                          value: party,
+                          child: Text(
+                            party.partyName,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
                       }).toList(),
                       onChanged: (value) {
                         setState(() {
-                          _vendorCode = value;
+                          _party = value;
                           _dirty = true;
                         });
                       },
                     ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<Site>(
-                      initialValue: _site,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Site / Plant',
-                      ),
-                      items: widget.data.sites.map((site) {
-                        return DropdownMenuItem(
-                          value: site,
-                          child: Text(site.siteName),
+                  ),
+
+                  _EditSection(
+                    title: 'Billing details',
+                    subtitle: 'Reference and vendor information',
+                    icon: Icons.description_outlined,
+                    child: LayoutBuilder(
+                      builder: (context, sectionConstraints) {
+                        final twoColumns = sectionConstraints.maxWidth >= 560;
+
+                        final fields = <Widget>[
+                          TextFormField(
+                            controller: _poController,
+                            decoration: const InputDecoration(
+                              labelText: 'PO Number',
+                              prefixIcon: Icon(
+                                Icons.confirmation_number_outlined,
+                              ),
+                            ),
+                          ),
+                          TextFormField(
+                            controller: _serviceEntryController,
+                            decoration: const InputDecoration(
+                              labelText: 'Service Entry',
+                              prefixIcon: Icon(Icons.assignment_outlined),
+                            ),
+                          ),
+                          DropdownButtonFormField<VendorCode>(
+                            initialValue: _vendorCode,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Vendor Code',
+                              prefixIcon: Icon(Icons.numbers_rounded),
+                            ),
+                            items: widget.data.vendorCodes.map((vendor) {
+                              return DropdownMenuItem(
+                                value: vendor,
+                                child: Text(vendor.vendorCode),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _vendorCode = value;
+                                _dirty = true;
+                              });
+                            },
+                          ),
+                          DropdownButtonFormField<Site>(
+                            initialValue: _site,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Site / Plant',
+                              prefixIcon: Icon(Icons.location_on_outlined),
+                            ),
+                            items: widget.data.sites.map((site) {
+                              return DropdownMenuItem(
+                                value: site,
+                                child: Text(site.siteName),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _site = value;
+                                _dirty = true;
+                              });
+                            },
+                          ),
+                        ];
+
+                        if (!twoColumns) {
+                          return Column(
+                            children: [
+                              for (var i = 0; i < fields.length; i++) ...[
+                                fields[i],
+                                if (i < fields.length - 1)
+                                  const SizedBox(height: 12),
+                              ],
+                            ],
+                          );
+                        }
+
+                        return Column(
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: fields[0]),
+                                const SizedBox(width: 12),
+                                Expanded(child: fields[1]),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: fields[2]),
+                                const SizedBox(width: 12),
+                                Expanded(child: fields[3]),
+                              ],
+                            ),
+                          ],
                         );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _site = value;
-                          _dirty = true;
-                        });
                       },
                     ),
-                    const SizedBox(height: 12),
-                    Row(
+                  ),
+
+                  _EditSection(
+                    title: 'Service period',
+                    subtitle: 'Optional service date range',
+                    icon: Icons.date_range_outlined,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: _EditDateField(
+                          child: _EditModernDateField(
                             label: 'Service From',
                             date: _serviceFrom,
                             onTap: _pickServiceFrom,
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: _EditDateField(
+                          child: _EditModernDateField(
                             label: 'Service To',
                             date: _serviceTo,
                             onTap: _pickServiceTo,
@@ -704,178 +758,221 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
 
-              _CardSection(
-                title: 'Service Items',
-                icon: Icons.list_alt_rounded,
-                child: Column(
-                  children: [
-                    for (var i = 0; i < _items.length; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _EditItemCard(
-                          item: _items[i],
-                          serialNo: i + 1,
-                          units: widget.data.units,
-                          currency: currency,
-                          canDelete: _items.length > 1,
-                          onDelete: () {
-                            _removeItem(i);
-                          },
-                          onChanged: () {
+                  _EditSection(
+                    title: 'Services',
+                    subtitle:
+                        '${_items.length} service item${_items.length == 1 ? '' : 's'}',
+                    icon: Icons.list_alt_rounded,
+                    trailing: TextButton.icon(
+                      onPressed: _addItem,
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('Add'),
+                    ),
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < _items.length; i++) ...[
+                          _EditItemCard(
+                            key: ObjectKey(_items[i]),
+                            item: _items[i],
+                            serialNo: i + 1,
+                            units: widget.data.units,
+                            currency: currency,
+                            canDelete: _items.length > 1,
+                            onDelete: () {
+                              _removeItem(i);
+                            },
+                            onChanged: () {
+                              setState(() {
+                                _dirty = true;
+                              });
+                            },
+                          ),
+                          if (i < _items.length - 1) const SizedBox(height: 10),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  _EditSection(
+                    title: 'Tax',
+                    subtitle: 'Choose invoice tax treatment',
+                    icon: Icons.percent_rounded,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SegmentedButton<InvoiceTaxType>(
+                          segments: const [
+                            ButtonSegment(
+                              value: InvoiceTaxType.taxable,
+                              icon: Icon(Icons.receipt_long_outlined),
+                              label: Text('Taxable'),
+                            ),
+                            ButtonSegment(
+                              value: InvoiceTaxType.nonTaxable,
+                              icon: Icon(Icons.money_off_csred_outlined),
+                              label: Text('Non-Taxable'),
+                            ),
+                          ],
+                          selected: {_taxType},
+                          onSelectionChanged: (value) {
                             setState(() {
+                              _taxType = value.first;
                               _dirty = true;
                             });
                           },
                         ),
-                      ),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: OutlinedButton.icon(
-                        onPressed: _addItem,
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Add Item'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
-              _CardSection(
-                title: 'Tax',
-                icon: Icons.percent_rounded,
-                child: Column(
-                  children: [
-                    SegmentedButton<InvoiceTaxType>(
-                      segments: const [
-                        ButtonSegment(
-                          value: InvoiceTaxType.taxable,
-                          label: Text('Taxable'),
-                        ),
-                        ButtonSegment(
-                          value: InvoiceTaxType.nonTaxable,
-                          label: Text('Non-Taxable'),
-                        ),
-                      ],
-                      selected: {_taxType},
-                      onSelectionChanged: (value) {
-                        setState(() {
-                          _taxType = value.first;
-                          _dirty = true;
-                        });
-                      },
-                    ),
+                        if (_taxType == InvoiceTaxType.taxable) ...[
+                          const SizedBox(height: 18),
 
-                    if (_taxType == InvoiceTaxType.taxable) ...[
-                      const SizedBox(height: 16),
+                          const Text(
+                            'GST Type',
+                            style: TextStyle(
+                              color: AppTheme.secondaryText,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
 
-                      RadioGroup<InvoiceGstMode>(
-                        groupValue: _gstMode,
-                        onChanged: (value) {
-                          if (value == null) {
-                            return;
-                          }
+                          const SizedBox(height: 9),
 
-                          setState(() {
-                            _gstMode = value;
-                            _dirty = true;
-                          });
-                        },
-                        child: Column(
-                          children: [
-                            RadioListTile<InvoiceGstMode>(
-                              value: InvoiceGstMode.cgstSgst,
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('CGST + SGST'),
-                              subtitle: Text(
-                                'CGST ${_rate(_cgstRate)}% + SGST ${_rate(_sgstRate)}%',
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _EditGstOption(
+                                  title: 'CGST + SGST',
+                                  subtitle:
+                                      '${_rate(_cgstRate)}% + ${_rate(_sgstRate)}%',
+                                  selected: _gstMode == InvoiceGstMode.cgstSgst,
+                                  onTap: () {
+                                    setState(() {
+                                      _gstMode = InvoiceGstMode.cgstSgst;
+                                      _dirty = true;
+                                    });
+                                  },
+                                ),
                               ),
-                            ),
-                            RadioListTile<InvoiceGstMode>(
-                              value: InvoiceGstMode.igst,
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('IGST'),
-                              subtitle: Text('IGST ${_rate(_igstRate)}%'),
-                            ),
-                          ],
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _EditGstOption(
+                                  title: 'IGST',
+                                  subtitle: '${_rate(_igstRate)}%',
+                                  selected: _gstMode == InvoiceGstMode.igst,
+                                  onTap: () {
+                                    setState(() {
+                                      _gstMode = InvoiceGstMode.igst;
+                                      _dirty = true;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  _EditSummaryCard(
+                    result: result,
+                    currency: currency,
+                    taxType: _taxType,
+                    gstMode: _effectiveGstMode,
+                    rate: _rate,
+                  ),
+                ],
+              );
+
+              if (!wide) {
+                return content;
+              }
+
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: content,
+                ),
+              );
+            },
+          ),
+        ),
+
+        bottomNavigationBar: SafeArea(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              border: const Border(top: BorderSide(color: AppTheme.border)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.brandNavy.withValues(alpha: 0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, -6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _dirty ? 'Unsaved changes' : 'Grand Total',
+                        style: TextStyle(
+                          color: _dirty
+                              ? AppTheme.warning
+                              : AppTheme.secondaryText,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          grandTotal,
+                          style: const TextStyle(
+                            color: AppTheme.darkText,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
 
-              _CardSection(
-                title: 'Invoice Summary',
-                icon: Icons.calculate_outlined,
-                child: Column(
-                  children: [
-                    _EditMoneyRow(
-                      label: 'Basic Amount',
-                      amount: result.basicAmountPaise,
-                      currency: currency,
+                const SizedBox(width: 16),
+
+                Expanded(
+                  flex: 2,
+                  child: FilledButton.icon(
+                    onPressed: _saving || !_dirty ? null : _save,
+                    icon: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.save_outlined),
+                    label: Text(
+                      _saving
+                          ? 'Saving...'
+                          : _dirty
+                          ? 'Update Draft'
+                          : 'Saved',
                     ),
-                    if (_taxType == InvoiceTaxType.taxable)
-                      _EditMoneyRow(
-                        label: 'Taxable Amount',
-                        amount: result.taxableAmountPaise,
-                        currency: currency,
-                      ),
-                    if (result.cgstAmountPaise > 0)
-                      _EditMoneyRow(
-                        label: 'CGST @ ${_rate(result.cgstRate)}%',
-                        amount: result.cgstAmountPaise,
-                        currency: currency,
-                      ),
-                    if (result.sgstAmountPaise > 0)
-                      _EditMoneyRow(
-                        label: 'SGST @ ${_rate(result.sgstRate)}%',
-                        amount: result.sgstAmountPaise,
-                        currency: currency,
-                      ),
-                    if (result.igstAmountPaise > 0)
-                      _EditMoneyRow(
-                        label: 'IGST @ ${_rate(result.igstRate)}%',
-                        amount: result.igstAmountPaise,
-                        currency: currency,
-                      ),
-                    const Divider(height: 28),
-                    _EditMoneyRow(
-                      label: 'Grand Total',
-                      amount: result.grandTotalPaise,
-                      currency: currency,
-                      bold: true,
-                    ),
-                    const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        result.amountInWords,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-            child: FilledButton.icon(
-              onPressed: _saving ? null : _save,
-              icon: _saving
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_outlined),
-              label: Text(_saving ? 'Saving...' : 'Update Draft'),
+              ],
             ),
           ),
         ),
@@ -929,7 +1026,7 @@ class _EditItem {
   }
 }
 
-class _EditItemCard extends StatelessWidget {
+class _EditItemCard extends StatefulWidget {
   final _EditItem item;
   final int serialNo;
   final List<Unit> units;
@@ -939,6 +1036,7 @@ class _EditItemCard extends StatelessWidget {
   final VoidCallback onChanged;
 
   const _EditItemCard({
+    super.key,
     required this.item,
     required this.serialNo,
     required this.units,
@@ -949,119 +1047,445 @@ class _EditItemCard extends StatelessWidget {
   });
 
   @override
+  State<_EditItemCard> createState() => _EditItemCardState();
+}
+
+class _EditItemCardState extends State<_EditItemCard> {
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Keep the first service ready to edit.
+    // Additional existing services remain compact until tapped.
+    _expanded = widget.serialNo == 1;
+  }
+
+  bool get _hasContent =>
+      widget.item.description.text.trim().isNotEmpty ||
+      widget.item.hsnSac.text.trim().isNotEmpty ||
+      widget.item.rate.text.trim().isNotEmpty;
+
+  void _changed() {
+    widget.onChanged();
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
+    final amount = widget.currency.format(
+      MoneyUtils.paiseToRupees(widget.item.amountPaise),
+    );
+
+    final title = widget.item.description.text.trim().isNotEmpty
+        ? widget.item.description.text.trim()
+        : 'Empty service item';
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).dividerColor),
-        borderRadius: BorderRadius.circular(14),
+        color: _hasContent ? AppTheme.surface : AppTheme.surfaceSoft,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: _hasContent ? AppTheme.borderStrong : AppTheme.border,
+        ),
       ),
       child: Column(
         children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () {
+                setState(() {
+                  _expanded = !_expanded;
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primarySoft,
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: Text(
+                        widget.serialNo.toString().padLeft(2, '0'),
+                        style: const TextStyle(
+                          color: AppTheme.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 11),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppTheme.darkText,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (_hasContent) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              amount,
+                              style: const TextStyle(
+                                color: AppTheme.secondaryText,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    if (widget.canDelete)
+                      IconButton(
+                        tooltip: 'Remove service',
+                        onPressed: widget.onDelete,
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 19,
+                          color: AppTheme.tertiaryText,
+                        ),
+                      ),
+
+                    AnimatedRotation(
+                      turns: _expanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      child: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.tertiaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 200),
+            crossFadeState: _expanded
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            secondChild: const SizedBox.shrink(),
+            firstChild: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: widget.item.description,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'Description of Service',
+                      prefixIcon: Icon(Icons.description_outlined),
+                    ),
+                    onChanged: (_) => _changed(),
+                  ),
+
+                  const SizedBox(height: 11),
+
+                  TextFormField(
+                    controller: widget.item.hsnSac,
+                    decoration: const InputDecoration(
+                      labelText: 'HSN / SAC',
+                      prefixIcon: Icon(Icons.tag_outlined),
+                    ),
+                    onChanged: (_) => _changed(),
+                  ),
+
+                  const SizedBox(height: 11),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: widget.item.qty,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,3}'),
+                            ),
+                          ],
+                          decoration: const InputDecoration(labelText: 'Qty'),
+                          onChanged: (_) => _changed(),
+                        ),
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      Expanded(
+                        child: DropdownButtonFormField<Unit>(
+                          initialValue: widget.item.unit,
+                          isExpanded: true,
+                          decoration: const InputDecoration(labelText: 'Unit'),
+                          items: widget.units.map((unit) {
+                            return DropdownMenuItem(
+                              value: unit,
+                              child: Text(unit.unitCode),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            widget.item.unit = value;
+                            _changed();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 11),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: widget.item.rate,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,2}'),
+                            ),
+                          ],
+                          decoration: const InputDecoration(
+                            labelText: 'Rate',
+                            prefixText: '\u20B9 ',
+                          ),
+                          onChanged: (_) => _changed(),
+                        ),
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      Expanded(
+                        child: Container(
+                          constraints: const BoxConstraints(minHeight: 58),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primarySoft,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Amount',
+                                style: TextStyle(
+                                  color: AppTheme.secondaryText,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  amount,
+                                  style: const TextStyle(
+                                    color: AppTheme.primaryDark,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// EDIT SCREEN PRESENTATION
+// ============================================================================
+
+class _EditInvoiceHero extends StatelessWidget {
+  const _EditInvoiceHero({
+    required this.invoiceNumber,
+    required this.invoiceDate,
+    required this.grandTotal,
+    required this.dirty,
+    required this.onDateTap,
+  });
+
+  final String invoiceNumber;
+  final DateTime invoiceDate;
+  final String grandTotal;
+  final bool dirty;
+  final VoidCallback onDateTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primaryDark, AppTheme.primary],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             children: [
-              CircleAvatar(radius: 14, child: Text('$serialNo')),
-              const SizedBox(width: 10),
               const Expanded(
                 child: Text(
-                  'Service Item',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  'EDITING DRAFT',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.1,
+                  ),
                 ),
               ),
-              if (canDelete)
-                IconButton(
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.delete_outline),
+              if (dirty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: const Text(
+                    'UNSAVED',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: item.description,
-            decoration: const InputDecoration(
-              labelText: 'Description of Service',
+
+          const SizedBox(height: 8),
+
+          Text(
+            invoiceNumber,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
             ),
-            onChanged: (_) => onChanged(),
           ),
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: item.hsnSac,
-            decoration: const InputDecoration(labelText: 'HSN / SAC'),
-            onChanged: (_) => onChanged(),
-          ),
-          const SizedBox(height: 10),
+
+          const SizedBox(height: 18),
+
           Row(
             children: [
               Expanded(
-                child: TextFormField(
-                  controller: item.qty,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d*\.?\d{0,3}'),
+                child: InkWell(
+                  onTap: onDateTap,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
                     ),
-                  ],
-                  decoration: const InputDecoration(labelText: 'QTY'),
-                  onChanged: (_) => onChanged(),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: DropdownButtonFormField<Unit>(
-                  initialValue: item.unit,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Unit'),
-                  items: units.map((unit) {
-                    return DropdownMenuItem(
-                      value: unit,
-                      child: Text(unit.unitCode),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    item.unit = value;
-                    onChanged();
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: item.rate,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d*\.?\d{0,2}'),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: 'Rate',
-                    prefixText: '\u20B9 ',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_month_outlined,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            DateFormat('dd MMM yyyy').format(invoiceDate),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  onChanged: (_) => onChanged(),
                 ),
               ),
-              const SizedBox(width: 10),
+
+              const SizedBox(width: 12),
+
               Expanded(
-                child: InputDecorator(
-                  decoration: const InputDecoration(labelText: 'Amount'),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      currency.format(
-                        MoneyUtils.paiseToRupees(item.amountPaise),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Grand Total',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        fontSize: 10,
                       ),
-                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                  ),
+                    const SizedBox(height: 3),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        grandTotal,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -1072,41 +1496,172 @@ class _EditItemCard extends StatelessWidget {
   }
 }
 
-class _CardSection extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Widget child;
-
-  const _CardSection({
+class _EditSection extends StatelessWidget {
+  const _EditSection({
     required this.title,
+    required this.subtitle,
     required this.icon,
     required this.child,
+    this.trailing,
   });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Widget child;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: AppTheme.primary),
-                const SizedBox(width: 10),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
+                child: Icon(icon, color: AppTheme.primary, size: 19),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppTheme.darkText,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: AppTheme.secondaryText,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ?trailing,
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _EditModernDateField extends StatelessWidget {
+  const _EditModernDateField({
+    required this.label,
+    required this.date,
+    required this.onTap,
+  });
+
+  final String label;
+  final DateTime? date;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: const Icon(Icons.calendar_month_outlined, size: 19),
+        ),
+        child: Text(
+          date == null ? 'Select' : DateFormat('dd MMM yyyy').format(date!),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: date == null ? AppTheme.tertiaryText : AppTheme.darkText,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EditGstOption extends StatelessWidget {
+  const _EditGstOption({
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(15),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.primarySoft : AppTheme.surfaceSoft,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: selected ? AppTheme.primary : AppTheme.border,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+              color: selected ? AppTheme.primary : AppTheme.tertiaryText,
+              size: 20,
             ),
-            const SizedBox(height: 16),
-            child,
+            const SizedBox(height: 7),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: selected ? AppTheme.primaryDark : AppTheme.darkText,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppTheme.secondaryText,
+                fontSize: 10,
+              ),
+            ),
           ],
         ),
       ),
@@ -1114,69 +1669,162 @@ class _CardSection extends StatelessWidget {
   }
 }
 
-class _EditDateField extends StatelessWidget {
-  final String label;
-  final DateTime? date;
-  final VoidCallback onTap;
-
-  const _EditDateField({
-    required this.label,
-    required this.date,
-    required this.onTap,
+class _EditSummaryCard extends StatelessWidget {
+  const _EditSummaryCard({
+    required this.result,
+    required this.currency,
+    required this.taxType,
+    required this.gstMode,
+    required this.rate,
   });
+
+  final InvoiceCalculationResult result;
+  final NumberFormat currency;
+  final InvoiceTaxType taxType;
+  final InvoiceGstMode gstMode;
+  final String Function(double) rate;
+
+  String _money(int value) {
+    return currency.format(MoneyUtils.paiseToRupees(value));
+  }
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          suffixIcon: const Icon(Icons.calendar_month_outlined),
-        ),
-        child: Text(
-          date == null ? 'Select date' : DateFormat('dd-MM-yyyy').format(date!),
-        ),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.brandNavy,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.calculate_outlined, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Invoice Summary',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          _EditDarkMoneyRow(
+            label: 'Basic Amount',
+            value: _money(result.basicAmountPaise),
+          ),
+
+          if (taxType == InvoiceTaxType.taxable)
+            _EditDarkMoneyRow(
+              label: 'Taxable Amount',
+              value: _money(result.taxableAmountPaise),
+            ),
+
+          if (gstMode == InvoiceGstMode.cgstSgst) ...[
+            _EditDarkMoneyRow(
+              label: 'CGST @ ${rate(result.cgstRate)}%',
+              value: _money(result.cgstAmountPaise),
+            ),
+            _EditDarkMoneyRow(
+              label: 'SGST @ ${rate(result.sgstRate)}%',
+              value: _money(result.sgstAmountPaise),
+            ),
+          ],
+
+          if (gstMode == InvoiceGstMode.igst)
+            _EditDarkMoneyRow(
+              label: 'IGST @ ${rate(result.igstRate)}%',
+              value: _money(result.igstAmountPaise),
+            ),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(color: Colors.white.withValues(alpha: 0.14)),
+          ),
+
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Grand Total',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _money(result.grandTotalPaise),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 15),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              result.amountInWords,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                height: 1.45,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _EditMoneyRow extends StatelessWidget {
-  final String label;
-  final int amount;
-  final NumberFormat currency;
-  final bool bold;
+class _EditDarkMoneyRow extends StatelessWidget {
+  const _EditDarkMoneyRow({required this.label, required this.value});
 
-  const _EditMoneyRow({
-    required this.label,
-    required this.amount,
-    required this.currency,
-    this.bold = false,
-  });
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(
-      fontSize: bold ? 18 : 15,
-      fontWeight: bold ? FontWeight.w800 : FontWeight.w500,
-    );
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Expanded(flex: 5, child: Text(label, style: style)),
-          const SizedBox(width: 12),
           Expanded(
-            flex: 4,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
-              child: Text(
-                currency.format(MoneyUtils.paiseToRupees(amount)),
-                style: style,
-              ),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white60, fontSize: 12),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

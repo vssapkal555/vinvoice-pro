@@ -7,116 +7,158 @@ import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../company/providers/company_providers.dart';
 import '../providers/unit_providers.dart';
+import '../widgets/master_data_ui.dart';
 
-class UnitsScreen extends ConsumerWidget {
+class UnitsScreen extends ConsumerStatefulWidget {
   const UnitsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final unitsAsync = ref.watch(unitsProvider);
+  ConsumerState<UnitsScreen> createState() => _UnitsScreenState();
+}
+
+class _UnitsScreenState extends ConsumerState<UnitsScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(unitsProvider);
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('Units')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          _openForm(context, ref);
-        },
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Unit'),
-      ),
-      body: unitsAsync.when(
+      body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text(
-            'Unable to load units.\n$error',
-            textAlign: TextAlign.center,
-          ),
+        error: (error, stack) => MasterError(
+          title: 'Unable to load units',
+          error: error.toString(),
+          onRetry: () => ref.invalidate(unitsProvider),
         ),
-        data: (units) {
-          if (units.isEmpty) {
-            return const Center(child: Text('No units found'));
-          }
+        data: (records) {
+          final q = _query.trim().toLowerCase();
 
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-            itemCount: units.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final unit = units[index];
-              final builtIn = unit.companyId == null;
+          final filtered = records.where((record) {
+            if (q.isEmpty) return true;
 
-              return Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.straighten_rounded),
-                  ),
-                  title: Text(
-                    unit.unitCode,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    builtIn ? '${unit.unitName} â€¢ Default' : unit.unitName,
-                  ),
-                  trailing: Switch(
-                    value: unit.isActive,
-                    onChanged: (value) async {
-                      final db = ref.read(appDatabaseProvider);
+            return record.unitCode.toLowerCase().contains(q) ||
+                record.unitName.toLowerCase().contains(q);
+          }).toList();
 
-                      await db.updateUnitRecord(
-                        UnitsCompanion(
-                          id: Value(unit.id),
-                          isActive: Value(value),
-                        ),
-                      );
-                    },
-                  ),
-                  onTap: () {
-                    _openForm(context, ref, unit: unit);
+          final active = records.where((e) => e.isActive).length;
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(unitsProvider);
+              await ref.read(unitsProvider.future);
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+              children: [
+                MasterHero(
+                  title: 'Units',
+                  subtitle: 'Quantity units used in invoice services',
+                  icon: Icons.straighten_rounded,
+                  total: records.length,
+                  active: active,
+                  onAdd: () => _openForm(context),
+                ),
+                const SizedBox(height: 16),
+                MasterSearch(
+                  controller: _searchController,
+                  hint: 'Search unit code or name',
+                  query: _query,
+                  onChanged: (value) {
+                    setState(() => _query = value);
+                  },
+                  onClear: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
                   },
                 ),
-              );
-            },
+                const SizedBox(height: 18),
+                MasterResultHeader(title: 'Units', count: filtered.length),
+                const SizedBox(height: 10),
+                if (records.isEmpty)
+                  MasterEmptyState(
+                    icon: Icons.straighten_rounded,
+                    title: 'No units yet',
+                    message:
+                        'Create quantity units such as EA, Days, Months or KM.',
+                    buttonLabel: 'Add Unit',
+                    onAdd: () => _openForm(context),
+                  )
+                else if (filtered.isEmpty)
+                  const MasterNoMatches()
+                else
+                  ...filtered.map((record) {
+                    final builtIn = record.companyId == null;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: MasterRecordCard(
+                        icon: Icons.straighten_rounded,
+                        title: record.unitCode,
+                        subtitle: record.unitName,
+                        badge: builtIn ? 'DEFAULT' : null,
+                        active: record.isActive,
+                        onTap: () => _openForm(context, unit: record),
+                        onActiveChanged: (value) async {
+                          await ref
+                              .read(appDatabaseProvider)
+                              .updateUnitRecord(
+                                UnitsCompanion(
+                                  id: Value(record.id),
+                                  isActive: Value(value),
+                                ),
+                              );
+                        },
+                      ),
+                    );
+                  }),
+              ],
+            ),
           );
         },
       ),
     );
   }
 
-  Future<void> _openForm(
-    BuildContext context,
-    WidgetRef ref, {
-    Unit? unit,
-  }) async {
+  Future<void> _openForm(BuildContext context, {Unit? unit}) async {
     final company = await ref.read(primaryCompanyProvider.future);
 
-    if (company == null || !context.mounted) {
-      return;
-    }
+    if (company == null || !context.mounted) return;
 
-    await showModalBottomSheet(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => _UnitForm(companyId: company.id, unit: unit),
+      backgroundColor: AppTheme.surface,
+      builder: (_) => _UnitForm(companyId: company.id, unit: unit),
     );
+
+    ref.invalidate(unitsProvider);
   }
 }
 
 class _UnitForm extends ConsumerStatefulWidget {
+  const _UnitForm({required this.companyId, this.unit});
+
   final String companyId;
   final Unit? unit;
-
-  const _UnitForm({required this.companyId, this.unit});
 
   @override
   ConsumerState<_UnitForm> createState() => _UnitFormState();
 }
 
 class _UnitFormState extends ConsumerState<_UnitForm> {
+  final _formKey = GlobalKey<FormState>();
+
   late final TextEditingController _code;
   late final TextEditingController _name;
 
@@ -139,23 +181,15 @@ class _UnitFormState extends ConsumerState<_UnitForm> {
   }
 
   Future<void> _save() async {
-    final code = _code.text.trim();
+    if (_saving || !_formKey.currentState!.validate()) return;
 
-    final name = _name.text.trim();
-
-    if (code.isEmpty || name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unit code and unit name are required')),
-      );
-      return;
-    }
-
-    setState(() {
-      _saving = true;
-    });
+    setState(() => _saving = true);
 
     try {
       final db = ref.read(appDatabaseProvider);
+
+      final code = _code.text.trim().toUpperCase();
+      final name = _name.text.trim();
 
       if (widget.unit == null) {
         await db.insertUnitRecord(
@@ -175,61 +209,50 @@ class _UnitFormState extends ConsumerState<_UnitForm> {
         );
       }
 
-      if (!mounted) return;
-
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     } finally {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-        });
-      }
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.unit == null ? 'Add Unit' : 'Edit Unit',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.darkText,
+    return MasterFormShell(
+      title: widget.unit == null ? 'New Unit' : 'Edit Unit',
+      subtitle: 'Quantity unit used for invoice items',
+      icon: Icons.straighten_rounded,
+      saving: _saving,
+      saveLabel: widget.unit == null ? 'Save Unit' : 'Update Unit',
+      onSave: _save,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            TextFormField(
+              controller: _code,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Unit Code',
+                hintText: 'EA',
+                prefixIcon: Icon(Icons.code_rounded),
+              ),
+              validator: (value) =>
+                  (value ?? '').trim().isEmpty ? 'Unit code is required' : null,
             ),
-          ),
-          const SizedBox(height: 18),
-          TextField(
-            controller: _code,
-            decoration: const InputDecoration(
-              labelText: 'Unit Code',
-              hintText: 'EA',
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _name,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Unit Name',
+                hintText: 'Each',
+                prefixIcon: Icon(Icons.label_outline_rounded),
+              ),
+              validator: (value) =>
+                  (value ?? '').trim().isEmpty ? 'Unit name is required' : null,
             ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _name,
-            decoration: const InputDecoration(
-              labelText: 'Unit Name',
-              hintText: 'Each',
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _saving ? null : _save,
-            child: Text(_saving ? 'Saving...' : 'Save Unit'),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

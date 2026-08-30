@@ -8,119 +8,157 @@ import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../company/providers/company_providers.dart';
 import '../providers/tax_rate_providers.dart';
+import '../widgets/master_data_ui.dart';
 
-class TaxRatesScreen extends ConsumerWidget {
+class TaxRatesScreen extends ConsumerStatefulWidget {
   const TaxRatesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final taxesAsync = ref.watch(taxRatesProvider);
+  ConsumerState<TaxRatesScreen> createState() => _TaxRatesScreenState();
+}
+
+class _TaxRatesScreenState extends ConsumerState<TaxRatesScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(taxRatesProvider);
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('GST & Tax')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          _openForm(context, ref);
-        },
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Tax Rate'),
-      ),
-      body: taxesAsync.when(
+      body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text(
-            'Unable to load tax rates.\n$error',
-            textAlign: TextAlign.center,
-          ),
+        error: (error, stack) => MasterError(
+          title: 'Unable to load tax rates',
+          error: error.toString(),
+          onRetry: () => ref.invalidate(taxRatesProvider),
         ),
-        data: (taxes) {
-          if (taxes.isEmpty) {
-            return const Center(child: Text('No tax rates found'));
-          }
+        data: (records) {
+          final q = _query.trim().toLowerCase();
 
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-            itemCount: taxes.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final tax = taxes[index];
+          final filtered = records.where((record) {
+            if (q.isEmpty) return true;
 
-              final builtIn = tax.companyId == null;
+            return record.taxName.toLowerCase().contains(q) ||
+                record.percentage.toString().contains(q);
+          }).toList();
 
-              return Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.percent_rounded),
-                  ),
-                  title: Text(
-                    tax.taxName,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    '${tax.percentage.toStringAsFixed(2)}%'
-                    '${builtIn ? ' â€¢ Default' : ''}',
-                  ),
-                  trailing: Switch(
-                    value: tax.isActive,
-                    onChanged: (value) async {
-                      final db = ref.read(appDatabaseProvider);
+          final active = records.where((e) => e.isActive).length;
 
-                      await db.updateTaxRateRecord(
-                        TaxRatesCompanion(
-                          id: Value(tax.id),
-                          isActive: Value(value),
-                        ),
-                      );
-                    },
-                  ),
-                  onTap: () {
-                    _openForm(context, ref, taxRate: tax);
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(taxRatesProvider);
+              await ref.read(taxRatesProvider.future);
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+              children: [
+                MasterHero(
+                  title: 'GST & Tax',
+                  subtitle: 'Tax rates available during invoicing',
+                  icon: Icons.percent_rounded,
+                  total: records.length,
+                  active: active,
+                  onAdd: () => _openForm(context),
+                ),
+                const SizedBox(height: 16),
+                MasterSearch(
+                  controller: _searchController,
+                  hint: 'Search tax name or percentage',
+                  query: _query,
+                  onChanged: (value) {
+                    setState(() => _query = value);
+                  },
+                  onClear: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
                   },
                 ),
-              );
-            },
+                const SizedBox(height: 18),
+                MasterResultHeader(title: 'Tax Rates', count: filtered.length),
+                const SizedBox(height: 10),
+                if (records.isEmpty)
+                  MasterEmptyState(
+                    icon: Icons.percent_rounded,
+                    title: 'No tax rates yet',
+                    message: 'Add GST rates used for invoice tax calculations.',
+                    buttonLabel: 'Add Tax Rate',
+                    onAdd: () => _openForm(context),
+                  )
+                else if (filtered.isEmpty)
+                  const MasterNoMatches()
+                else
+                  ...filtered.map((record) {
+                    final builtIn = record.companyId == null;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: MasterRecordCard(
+                        icon: Icons.percent_rounded,
+                        title: record.taxName,
+                        subtitle: '${record.percentage.toStringAsFixed(2)}%',
+                        badge: builtIn ? 'DEFAULT' : null,
+                        active: record.isActive,
+                        onTap: () => _openForm(context, taxRate: record),
+                        onActiveChanged: (value) async {
+                          await ref
+                              .read(appDatabaseProvider)
+                              .updateTaxRateRecord(
+                                TaxRatesCompanion(
+                                  id: Value(record.id),
+                                  isActive: Value(value),
+                                ),
+                              );
+                        },
+                      ),
+                    );
+                  }),
+              ],
+            ),
           );
         },
       ),
     );
   }
 
-  Future<void> _openForm(
-    BuildContext context,
-    WidgetRef ref, {
-    TaxRate? taxRate,
-  }) async {
+  Future<void> _openForm(BuildContext context, {TaxRate? taxRate}) async {
     final company = await ref.read(primaryCompanyProvider.future);
 
-    if (company == null || !context.mounted) {
-      return;
-    }
+    if (company == null || !context.mounted) return;
 
-    await showModalBottomSheet(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) =>
-          _TaxRateForm(companyId: company.id, taxRate: taxRate),
+      backgroundColor: AppTheme.surface,
+      builder: (_) => _TaxRateForm(companyId: company.id, taxRate: taxRate),
     );
+
+    ref.invalidate(taxRatesProvider);
   }
 }
 
 class _TaxRateForm extends ConsumerStatefulWidget {
+  const _TaxRateForm({required this.companyId, this.taxRate});
+
   final String companyId;
   final TaxRate? taxRate;
-
-  const _TaxRateForm({required this.companyId, this.taxRate});
 
   @override
   ConsumerState<_TaxRateForm> createState() => _TaxRateFormState();
 }
 
 class _TaxRateFormState extends ConsumerState<_TaxRateForm> {
+  final _formKey = GlobalKey<FormState>();
+
   late final TextEditingController _name;
   late final TextEditingController _percentage;
 
@@ -145,32 +183,24 @@ class _TaxRateFormState extends ConsumerState<_TaxRateForm> {
   }
 
   Future<void> _save() async {
-    final taxName = _name.text.trim().toUpperCase();
+    if (_saving || !_formKey.currentState!.validate()) return;
 
     final percentage = double.tryParse(_percentage.text.trim());
 
-    if (taxName.isEmpty ||
-        percentage == null ||
-        percentage < 0 ||
-        percentage > 100) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid tax name and percentage')),
-      );
-      return;
-    }
+    if (percentage == null) return;
 
-    setState(() {
-      _saving = true;
-    });
+    setState(() => _saving = true);
 
     try {
       final db = ref.read(appDatabaseProvider);
+
+      final name = _name.text.trim().toUpperCase();
 
       if (widget.taxRate == null) {
         await db.insertTaxRateRecord(
           TaxRatesCompanion.insert(
             companyId: Value(widget.companyId),
-            taxName: taxName,
+            taxName: name,
             percentage: percentage,
           ),
         );
@@ -178,71 +208,68 @@ class _TaxRateFormState extends ConsumerState<_TaxRateForm> {
         await db.updateTaxRateRecord(
           TaxRatesCompanion(
             id: Value(widget.taxRate!.id),
-            taxName: Value(taxName),
+            taxName: Value(name),
             percentage: Value(percentage),
           ),
         );
       }
 
-      if (!mounted) return;
-
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     } finally {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-        });
-      }
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.taxRate == null ? 'Add Tax Rate' : 'Edit Tax Rate',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.darkText,
+    return MasterFormShell(
+      title: widget.taxRate == null ? 'New Tax Rate' : 'Edit Tax Rate',
+      subtitle: 'GST rate used during invoice calculation',
+      icon: Icons.percent_rounded,
+      saving: _saving,
+      saveLabel: widget.taxRate == null ? 'Save Tax Rate' : 'Update Tax Rate',
+      onSave: _save,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            TextFormField(
+              controller: _name,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Tax Name',
+                hintText: 'CGST',
+                prefixIcon: Icon(Icons.receipt_long_outlined),
+              ),
+              validator: (value) =>
+                  (value ?? '').trim().isEmpty ? 'Tax name is required' : null,
             ),
-          ),
-          const SizedBox(height: 18),
-          TextField(
-            controller: _name,
-            decoration: const InputDecoration(
-              labelText: 'Tax Name',
-              hintText: 'CGST',
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _percentage,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'Percentage',
+                prefixIcon: Icon(Icons.percent_rounded),
+                suffixText: '%',
+              ),
+              validator: (value) {
+                final percentage = double.tryParse((value ?? '').trim());
+
+                if (percentage == null || percentage < 0 || percentage > 100) {
+                  return 'Enter a percentage from 0 to 100';
+                }
+
+                return null;
+              },
             ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _percentage,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-            ],
-            decoration: const InputDecoration(
-              labelText: 'Percentage',
-              suffixText: '%',
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _saving ? null : _save,
-            child: Text(_saving ? 'Saving...' : 'Save Tax Rate'),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

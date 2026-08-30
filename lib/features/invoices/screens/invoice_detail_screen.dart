@@ -189,9 +189,9 @@ class _InvoiceDetailContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       children: [
-        _InvoicePdfActionsBar(detail: detail),
-
         _HeaderCard(invoice: invoice, currency: currency),
+
+        _InvoicePdfActionsBar(detail: detail),
 
         _Section(
           title: 'Party Details',
@@ -314,12 +314,31 @@ class _HeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final status = invoice.status.toLowerCase();
+
+    final statusLabel = switch (status) {
+      'issued' => 'ISSUED',
+      'cancelled' => 'CANCELLED',
+      _ => 'DRAFT',
+    };
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.primary,
-        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primaryDark, AppTheme.primary],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,6 +355,7 @@ class _HeaderCard extends StatelessWidget {
                   ),
                 ),
               ),
+
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -343,34 +363,112 @@ class _HeaderCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(99),
                 ),
                 child: Text(
-                  invoice.status.toUpperCase(),
+                  statusLabel,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            invoice.partyNameSnapshot,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.85)),
+
+          const SizedBox(height: 9),
+
+          Row(
+            children: [
+              const Icon(
+                Icons.business_outlined,
+                color: Colors.white70,
+                size: 16,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  invoice.partyNameSnapshot,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.86),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 22),
-          const Text('Grand Total', style: TextStyle(color: Colors.white70)),
-          const SizedBox(height: 3),
-          Text(
-            currency.format(MoneyUtils.paiseToRupees(invoice.grandTotalPaise)),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-            ),
+
+          const SizedBox(height: 24),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Grand Total',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.68),
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        currency.format(
+                          MoneyUtils.paiseToRupees(invoice.grandTotalPaise),
+                        ),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 29,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.11),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_month_outlined,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      DateFormat('dd MMM yyyy').format(invoice.invoiceDate),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -387,68 +485,29 @@ class _ItemsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Section(
-      title: 'Description of Service',
+      title: 'Services',
       icon: Icons.list_alt_rounded,
       children: [
         if (items.isEmpty)
-          const Text('No invoice items found.')
+          const Text(
+            'No invoice items found.',
+            style: TextStyle(color: AppTheme.secondaryText),
+          )
         else
-          for (final item in items)
-            Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                border: Border.all(color: Theme.of(context).dividerColor),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 14,
-                        child: Text(
-                          '${item.serialNo}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          item.description,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if ((item.hsnSac ?? '').isNotEmpty)
-                    _MiniRow(label: 'HSN/SAC', value: item.hsnSac!),
-                  _MiniRow(label: 'QTY', value: _formatQty(item.quantity)),
-                  _MiniRow(label: 'Unit', value: item.unitCodeSnapshot ?? ''),
-                  _MiniRow(
-                    label: 'Rate',
-                    value: currency.format(
-                      MoneyUtils.paiseToRupees(item.ratePaise),
-                    ),
-                  ),
-                  _MiniRow(
-                    label: 'Amount',
-                    value: currency.format(
-                      MoneyUtils.paiseToRupees(item.amountPaise),
-                    ),
-                    emphasize: true,
-                  ),
-                ],
-              ),
-            ),
+          for (var index = 0; index < items.length; index++) ...[
+            _ServiceDetailTile(item: items[index], currency: currency),
+            if (index < items.length - 1) const SizedBox(height: 10),
+          ],
       ],
     );
   }
+}
+
+class _ServiceDetailTile extends StatelessWidget {
+  const _ServiceDetailTile({required this.item, required this.currency});
+
+  final InvoiceItem item;
+  final NumberFormat currency;
 
   String _formatQty(double value) {
     if (value == value.roundToDouble()) {
@@ -456,6 +515,126 @@ class _ItemsSection extends StatelessWidget {
     }
 
     return value.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = currency.format(MoneyUtils.paiseToRupees(item.amountPaise));
+
+    final rate = currency.format(MoneyUtils.paiseToRupees(item.ratePaise));
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceSoft,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Text(
+                  item.serialNo.toString().padLeft(2, '0'),
+                  style: const TextStyle(
+                    color: AppTheme.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 11),
+
+              Expanded(
+                child: Text(
+                  item.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppTheme.darkText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              Text(
+                amount,
+                style: const TextStyle(
+                  color: AppTheme.primaryDark,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if ((item.hsnSac ?? '').trim().isNotEmpty)
+                _ServiceMetaChip(label: 'HSN/SAC', value: item.hsnSac!),
+
+              _ServiceMetaChip(label: 'Qty', value: _formatQty(item.quantity)),
+
+              if ((item.unitCodeSnapshot ?? '').trim().isNotEmpty)
+                _ServiceMetaChip(label: 'Unit', value: item.unitCodeSnapshot!),
+
+              _ServiceMetaChip(label: 'Rate', value: rate),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceMetaChip extends StatelessWidget {
+  const _ServiceMetaChip({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontSize: 10, color: AppTheme.secondaryText),
+          children: [
+            TextSpan(text: '$label  '),
+            TextSpan(
+              text: value,
+              style: const TextStyle(
+                color: AppTheme.darkText,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -465,53 +644,137 @@ class _TaxSummary extends StatelessWidget {
 
   const _TaxSummary({required this.invoice, required this.currency});
 
+  String _money(int paise) {
+    return currency.format(MoneyUtils.paiseToRupees(paise));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return _Section(
-      title: 'Invoice Summary',
-      icon: Icons.calculate_outlined,
-      children: [
-        _DetailRow(
-          label: 'Tax Type',
-          value: invoice.taxType == 'nonTaxable' ? 'Non-Taxable' : 'Taxable',
-        ),
-        _MoneyRow(
-          label: 'Basic Amount',
-          paise: invoice.basicAmountPaise,
-          currency: currency,
-        ),
-        if (invoice.taxType == 'taxable')
-          _MoneyRow(
-            label: 'Taxable Amount',
-            paise: invoice.taxableAmountPaise,
-            currency: currency,
+    final taxable = invoice.taxType == 'taxable';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.brandNavy,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.calculate_outlined,
+                  color: Colors.white,
+                  size: 19,
+                ),
+              ),
+
+              const SizedBox(width: 11),
+
+              const Expanded(
+                child: Text(
+                  'Invoice Summary',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  taxable ? 'TAXABLE' : 'NON-TAXABLE',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
-        if (invoice.cgstAmountPaise > 0)
-          _MoneyRow(
-            label: 'CGST @ ${_rate(invoice.cgstRate)}%',
-            paise: invoice.cgstAmountPaise,
-            currency: currency,
+
+          const SizedBox(height: 17),
+
+          _DarkInvoiceRow(
+            label: 'Basic Amount',
+            value: _money(invoice.basicAmountPaise),
           ),
-        if (invoice.sgstAmountPaise > 0)
-          _MoneyRow(
-            label: 'SGST @ ${_rate(invoice.sgstRate)}%',
-            paise: invoice.sgstAmountPaise,
-            currency: currency,
+
+          if (taxable)
+            _DarkInvoiceRow(
+              label: 'Taxable Amount',
+              value: _money(invoice.taxableAmountPaise),
+            ),
+
+          if (invoice.cgstAmountPaise > 0)
+            _DarkInvoiceRow(
+              label: 'CGST @ ${_rate(invoice.cgstRate)}%',
+              value: _money(invoice.cgstAmountPaise),
+            ),
+
+          if (invoice.sgstAmountPaise > 0)
+            _DarkInvoiceRow(
+              label: 'SGST @ ${_rate(invoice.sgstRate)}%',
+              value: _money(invoice.sgstAmountPaise),
+            ),
+
+          if (invoice.igstAmountPaise > 0)
+            _DarkInvoiceRow(
+              label: 'IGST @ ${_rate(invoice.igstRate)}%',
+              value: _money(invoice.igstAmountPaise),
+            ),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(color: Colors.white.withValues(alpha: 0.14)),
           ),
-        if (invoice.igstAmountPaise > 0)
-          _MoneyRow(
-            label: 'IGST @ ${_rate(invoice.igstRate)}%',
-            paise: invoice.igstAmountPaise,
-            currency: currency,
+
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Grand Total',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _money(invoice.grandTotalPaise),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        const Divider(height: 26),
-        _MoneyRow(
-          label: 'Grand Total',
-          paise: invoice.grandTotalPaise,
-          currency: currency,
-          emphasize: true,
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -521,6 +784,41 @@ class _TaxSummary extends StatelessWidget {
     }
 
     return value.toString();
+  }
+}
+
+class _DarkInvoiceRow extends StatelessWidget {
+  const _DarkInvoiceRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white60, fontSize: 12),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -537,30 +835,48 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: AppTheme.primary),
-                const SizedBox(width: 10),
-                Text(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppTheme.primary, size: 19),
+              ),
+
+              const SizedBox(width: 11),
+
+              Expanded(
+                child: Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 17,
+                    color: AppTheme.darkText,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ...children,
-          ],
-        ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          ...children,
+        ],
       ),
     );
   }
@@ -598,76 +914,6 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _MoneyRow extends StatelessWidget {
-  final String label;
-  final int paise;
-  final NumberFormat currency;
-  final bool emphasize;
-
-  const _MoneyRow({
-    required this.label,
-    required this.paise,
-    required this.currency,
-    this.emphasize = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final style = TextStyle(
-      fontSize: emphasize ? 18 : 15,
-      fontWeight: emphasize ? FontWeight.w800 : FontWeight.w500,
-    );
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: style)),
-          Text(currency.format(MoneyUtils.paiseToRupees(paise)), style: style),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool emphasize;
-
-  const _MiniRow({
-    required this.label,
-    required this.value,
-    this.emphasize = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: const TextStyle(color: AppTheme.secondaryText),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _InvoicePdfActionsBar extends StatelessWidget {
   final InvoiceDetailData detail;
 
@@ -675,42 +921,97 @@ class _InvoicePdfActionsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  context.push('/invoices/${detail.invoice.id}/pdf');
-                },
-                icon: const Icon(Icons.picture_as_pdf_outlined),
-                label: const Text('Preview'),
-              ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _DocumentAction(
+              icon: Icons.picture_as_pdf_outlined,
+              label: 'Preview',
+              onTap: () {
+                context.push('/invoices/${detail.invoice.id}/pdf');
+              },
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  await InvoicePdfActions.printOrSave(detail);
-                },
-                icon: const Icon(Icons.print_outlined),
-                label: const Text('Print'),
-              ),
+          ),
+
+          const SizedBox(width: 8),
+
+          Expanded(
+            child: _DocumentAction(
+              icon: Icons.print_outlined,
+              label: 'Print',
+              onTap: () async {
+                await InvoicePdfActions.printOrSave(detail);
+              },
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: () async {
-                  await InvoicePdfActions.share(detail);
-                },
-                icon: const Icon(Icons.share_outlined),
-                label: const Text('Share'),
-              ),
+          ),
+
+          const SizedBox(width: 8),
+
+          Expanded(
+            child: _DocumentAction(
+              icon: Icons.share_outlined,
+              label: 'Share',
+              primary: true,
+              onTap: () async {
+                await InvoicePdfActions.share(detail);
+              },
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DocumentAction extends StatelessWidget {
+  const _DocumentAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.primary = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: primary ? AppTheme.primary : AppTheme.surfaceSoft,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 13),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: primary ? Colors.white : AppTheme.darkText,
+              ),
+              const SizedBox(height: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  color: primary ? Colors.white : AppTheme.darkText,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -732,161 +1033,513 @@ class _InvoicePaymentCard extends ConsumerWidget {
 
     final paymentsAsync = ref.watch(invoicePaymentsProvider(invoiceId));
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Payments & Outstanding',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-            ),
+    final issued = invoiceStatus.toLowerCase() == 'issued';
 
-            const SizedBox(height: 14),
-
-            summaryAsync.when(
-              loading: () => const LinearProgressIndicator(),
-              error: (error, stack) =>
-                  Text('Unable to load payment summary.\n$error'),
-              data: (summary) {
-                return Column(
-                  children: [
-                    _PaymentSummaryRow(
-                      label: 'Invoice Total',
-                      value:
-                          '\u20B9${MoneyUtils.paiseToRupeesText(summary.invoiceTotalPaise)}',
-                    ),
-                    _PaymentSummaryRow(
-                      label: 'Paid',
-                      value:
-                          '\u20B9${MoneyUtils.paiseToRupeesText(summary.paidPaise)}',
-                    ),
-                    _PaymentSummaryRow(
-                      label: 'Outstanding',
-                      value:
-                          '\u20B9${MoneyUtils.paiseToRupeesText(summary.outstandingPaise)}',
-                      emphasize: true,
-                    ),
-                    _PaymentSummaryRow(
-                      label: 'Payment Status',
-                      value: paymentStateLabel(summary.state),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    if (invoiceStatus.toLowerCase() != 'cancelled' &&
-                        summary.outstandingPaise > 0)
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: () async {
-                            await context.push('/invoices/$invoiceId/payment');
-
-                            ref.invalidate(
-                              invoicePaymentSummaryProvider(invoiceId),
-                            );
-
-                            ref.invalidate(invoicePaymentsProvider(invoiceId));
-                          },
-                          icon: const Icon(Icons.payments_outlined),
-                          label: const Text('Record Payment'),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            const Divider(),
-
-            const SizedBox(height: 8),
-
-            const Text(
-              'Payment History',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-
-            const SizedBox(height: 8),
-
-            paymentsAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: LinearProgressIndicator(),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: AppTheme.primary,
+                  size: 19,
+                ),
               ),
-              error: (error, stack) =>
-                  Text('Unable to load payment history.\n$error'),
-              data: (payments) {
-                if (payments.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('No payments recorded.'),
-                  );
-                }
 
-                return Column(
+              const SizedBox(width: 11),
+
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final payment in payments)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.currency_rupee_rounded),
-                        ),
-                        title: Text(
-                          '\u20B9${MoneyUtils.paiseToRupeesText(payment.amountPaise)}',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        subtitle: Text(
-                          '${DateFormat('dd-MM-yyyy').format(payment.paymentDate)}'
-                          ' \u2022 ${paymentModeLabel(payment.paymentMode)}'
-                          '${payment.referenceNumber == null ? '' : ' \u2022 ${payment.referenceNumber}'}',
-                        ),
-                        trailing: payment.receivedBy == null
-                            ? null
-                            : Text(payment.receivedBy!),
+                    Text(
+                      'Payments',
+                      style: TextStyle(
+                        color: AppTheme.darkText,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
                       ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Collection and outstanding balance',
+                      style: TextStyle(
+                        color: AppTheme.secondaryText,
+                        fontSize: 11,
+                      ),
+                    ),
                   ],
-                );
-              },
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 17),
+
+          summaryAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: LinearProgressIndicator(),
             ),
-          ],
+
+            error: (error, stack) => Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceSoft,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text('Unable to load payment summary.\n$error'),
+            ),
+
+            data: (summary) {
+              final state = paymentStateLabel(summary.state);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _PaymentMetric(
+                          label: 'Invoice Total',
+                          value:
+                              '\u20B9${MoneyUtils.paiseToRupeesText(summary.invoiceTotalPaise)}',
+                          icon: Icons.receipt_long_outlined,
+                        ),
+                      ),
+
+                      const SizedBox(width: 8),
+
+                      Expanded(
+                        child: _PaymentMetric(
+                          label: 'Paid',
+                          value:
+                              '\u20B9${MoneyUtils.paiseToRupeesText(summary.paidPaise)}',
+                          icon: Icons.check_circle_outline_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: summary.outstandingPaise > 0
+                          ? AppTheme.primarySoft
+                          : AppTheme.surfaceSoft,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: summary.outstandingPaise > 0
+                            ? AppTheme.primary.withValues(alpha: 0.18)
+                            : AppTheme.border,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: summary.outstandingPaise > 0
+                                ? AppTheme.primary
+                                : AppTheme.success,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            summary.outstandingPaise > 0
+                                ? Icons.account_balance_wallet_outlined
+                                : Icons.check_rounded,
+                            color: Colors.white,
+                            size: 19,
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Outstanding',
+                                style: TextStyle(
+                                  color: AppTheme.secondaryText,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  '\u20B9${MoneyUtils.paiseToRupeesText(summary.outstandingPaise)}',
+                                  style: const TextStyle(
+                                    color: AppTheme.darkText,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        _PaymentStatusChip(label: state),
+                      ],
+                    ),
+                  ),
+
+                  if (issued && summary.outstandingPaise > 0) ...[
+                    const SizedBox(height: 13),
+
+                    FilledButton.icon(
+                      onPressed: () async {
+                        await context.push('/invoices/$invoiceId/payment');
+
+                        ref.invalidate(
+                          invoicePaymentSummaryProvider(invoiceId),
+                        );
+
+                        ref.invalidate(invoicePaymentsProvider(invoiceId));
+                      },
+                      icon: const Icon(Icons.payments_outlined),
+                      label: const Text('Record Payment'),
+                    ),
+                  ],
+
+                  if (!issued && summary.outstandingPaise > 0) ...[
+                    const SizedBox(height: 12),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceSoft,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            size: 17,
+                            color: AppTheme.secondaryText,
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Payments become available after the invoice is issued.',
+                              style: TextStyle(
+                                color: AppTheme.secondaryText,
+                                fontSize: 11,
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+
+          const SizedBox(height: 18),
+
+          const Divider(height: 1),
+
+          const SizedBox(height: 16),
+
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Payment History',
+                  style: TextStyle(
+                    color: AppTheme.darkText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+
+              paymentsAsync.maybeWhen(
+                data: (payments) => Text(
+                  '${payments.length} record${payments.length == 1 ? '' : 's'}',
+                  style: const TextStyle(
+                    color: AppTheme.secondaryText,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                orElse: () => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          paymentsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: LinearProgressIndicator(),
+            ),
+
+            error: (error, stack) =>
+                Text('Unable to load payment history.\n$error'),
+
+            data: (payments) {
+              if (payments.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 18,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceSoft,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.history_rounded,
+                        color: AppTheme.tertiaryText,
+                        size: 20,
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'No payments recorded yet.',
+                          style: TextStyle(
+                            color: AppTheme.secondaryText,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  for (var index = 0; index < payments.length; index++) ...[
+                    _PaymentHistoryTile(payment: payments[index]),
+
+                    if (index < payments.length - 1) const SizedBox(height: 8),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentMetric extends StatelessWidget {
+  const _PaymentMetric({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceSoft,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: AppTheme.primary),
+
+          const SizedBox(height: 9),
+
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppTheme.secondaryText,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 3),
+
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: AppTheme.darkText,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentStatusChip extends StatelessWidget {
+  const _PaymentStatusChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = label.toLowerCase();
+
+    final isPaid = normalized == 'paid';
+    final isPartial = normalized.contains('partial');
+
+    final background = isPaid
+        ? AppTheme.successSoft
+        : isPartial
+        ? AppTheme.warningSoft
+        : AppTheme.surface;
+
+    final foreground = isPaid
+        ? AppTheme.success
+        : isPartial
+        ? AppTheme.warning
+        : AppTheme.secondaryText;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          color: foreground,
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.3,
         ),
       ),
     );
   }
 }
 
-class _PaymentSummaryRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool emphasize;
+class _PaymentHistoryTile extends StatelessWidget {
+  const _PaymentHistoryTile({required this.payment});
 
-  const _PaymentSummaryRow({
-    required this.label,
-    required this.value,
-    this.emphasize = false,
-  });
+  final Payment payment;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    final reference = (payment.referenceNumber ?? '').trim();
+
+    final receivedBy = (payment.receivedBy ?? '').trim();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceSoft,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+      ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
-              ),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppTheme.successSoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.currency_rupee_rounded,
+              color: AppTheme.success,
+              size: 19,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: emphasize ? FontWeight.w800 : FontWeight.w600,
+
+          const SizedBox(width: 11),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '\u20B9${MoneyUtils.paiseToRupeesText(payment.amountPaise)}',
+                  style: const TextStyle(
+                    color: AppTheme.darkText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  '${DateFormat('dd MMM yyyy').format(payment.paymentDate)} • ${paymentModeLabel(payment.paymentMode)}',
+                  style: const TextStyle(
+                    color: AppTheme.secondaryText,
+                    fontSize: 10,
+                  ),
+                ),
+
+                if (reference.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    'Ref: $reference',
+                    style: const TextStyle(
+                      color: AppTheme.secondaryText,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+
+                if (receivedBy.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    'Received by $receivedBy',
+                    style: const TextStyle(
+                      color: AppTheme.secondaryText,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

@@ -29,15 +29,12 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
   bool _reading = false;
   bool _importing = false;
   bool _templateBusy = false;
-
   bool _overwriteDuplicates = false;
 
   String? _selectedFileName;
 
   Future<void> _pickFile() async {
-    if (_reading || _importing) {
-      return;
-    }
+    if (_reading || _importing) return;
 
     setState(() {
       _reading = true;
@@ -49,9 +46,7 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
         allowedExtensions: const ['xlsx'],
       );
 
-      if (selected == null) {
-        return;
-      }
+      if (selected == null) return;
 
       Uint8List? bytes;
 
@@ -83,15 +78,11 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
         companyId: company.id,
       );
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _selectedFileName = selected.name;
-
         _preview = preview;
-
         _overwriteDuplicates = false;
       });
     } catch (error) {
@@ -110,9 +101,7 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
   Future<void> _import() async {
     final preview = _preview;
 
-    if (preview == null || _importing) {
-      return;
-    }
+    if (preview == null || _importing) return;
 
     if (preview.hasFileErrors) {
       _message('Fix the Excel template errors before importing.');
@@ -133,6 +122,10 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          icon: const Icon(
+            Icons.warning_amber_rounded,
+            color: AppTheme.warning,
+          ),
           title: const Text('Overwrite duplicates?'),
           content: Text(
             '${preview.duplicateCount} invoice(s) already exist. '
@@ -140,24 +133,18 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context, false);
-              },
+              onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () {
-                Navigator.pop(context, true);
-              },
+              onPressed: () => Navigator.pop(context, true),
               child: const Text('Overwrite'),
             ),
           ],
         ),
       );
 
-      if (confirmed != true) {
-        return;
-      }
+      if (confirmed != true) return;
     }
 
     setState(() {
@@ -180,26 +167,23 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
       );
 
       ref.invalidate(allInvoicesProvider);
-
       ref.invalidate(importHistoryProvider);
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           icon: Icon(
             result.failed == 0
-                ? Icons.check_circle_outline
+                ? Icons.check_circle_outline_rounded
                 : Icons.warning_amber_rounded,
             size: 48,
+            color: result.failed == 0 ? AppTheme.success : AppTheme.warning,
           ),
           title: const Text('Import Complete'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _ResultLine(label: 'Imported', value: result.imported),
               _ResultLine(label: 'Overwritten', value: result.overwritten),
@@ -207,29 +191,37 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
               _ResultLine(label: 'Failed', value: result.failed),
               if (result.errors.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                const Text(
-                  'Errors',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 5),
-                ...result.errors.take(5).map((error) => Text('\u2022 $error')),
+                const Divider(),
+                const SizedBox(height: 8),
+                for (final error in result.errors.take(5))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 5),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('\u2022 '),
+                        Expanded(
+                          child: Text(
+                            error,
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ],
           ),
           actions: [
             FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
+              onPressed: () => Navigator.pop(context),
               child: const Text('Done'),
             ),
           ],
         ),
       );
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _preview = null;
@@ -250,9 +242,7 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
   }
 
   Future<void> _downloadTemplate() async {
-    if (_templateBusy) {
-      return;
-    }
+    if (_templateBusy) return;
 
     setState(() {
       _templateBusy = true;
@@ -291,12 +281,23 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
   Widget build(BuildContext context) {
     final preview = _preview;
 
+    final canImport =
+        preview != null &&
+        !preview.hasFileErrors &&
+        preview.invoices.any(
+          (invoice) =>
+              !invoice.hasErrors &&
+              (!invoice.duplicate || _overwriteDuplicates),
+        );
+
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('Import Excel')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
-          _IntroCard(
+          _ImportHero(
             reading: _reading,
             templateBusy: _templateBusy,
             fileName: _selectedFileName,
@@ -310,27 +311,28 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
             _PreviewSummary(preview: preview),
 
             if (preview.fileIssues.isNotEmpty) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               _FileIssuesCard(issues: preview.fileIssues),
             ],
 
-            const SizedBox(height: 16),
+            if (preview.duplicateCount > 0) ...[
+              const SizedBox(height: 14),
+              _DuplicateOptions(
+                duplicateCount: preview.duplicateCount,
+                overwrite: _overwriteDuplicates,
+                onChanged: (value) {
+                  setState(() {
+                    _overwriteDuplicates = value;
+                  });
+                },
+              ),
+            ],
 
-            _DuplicateOptions(
-              duplicateCount: preview.duplicateCount,
-              overwrite: _overwriteDuplicates,
-              onChanged: (value) {
-                setState(() {
-                  _overwriteDuplicates = value;
-                });
-              },
-            ),
-
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             _InvoicePreviewList(preview: preview),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
 
             Row(
               children: [
@@ -341,18 +343,19 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
                     label: const Text('Clear'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   flex: 2,
                   child: FilledButton.icon(
-                    onPressed: _importing || preview.hasFileErrors
-                        ? null
-                        : _import,
+                    onPressed: _importing || !canImport ? null : _import,
                     icon: _importing
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Icon(Icons.download_done_rounded),
                     label: Text(
@@ -364,11 +367,11 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
             ),
           ],
 
-          const SizedBox(height: 28),
+          const SizedBox(height: 26),
 
           const _HistoryHeading(),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           const _ImportHistory(),
         ],
@@ -377,14 +380,8 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
   }
 }
 
-class _IntroCard extends StatelessWidget {
-  final bool reading;
-  final bool templateBusy;
-  final String? fileName;
-  final VoidCallback onPick;
-  final VoidCallback onTemplate;
-
-  const _IntroCard({
+class _ImportHero extends StatelessWidget {
+  const _ImportHero({
     required this.reading,
     required this.templateBusy,
     required this.fileName,
@@ -392,172 +389,246 @@ class _IntroCard extends StatelessWidget {
     required this.onTemplate,
   });
 
+  final bool reading;
+  final bool templateBusy;
+  final String? fileName;
+  final VoidCallback onPick;
+  final VoidCallback onTemplate;
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: const Icon(
-                    Icons.table_view_outlined,
-                    color: AppTheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Historical Invoice Import',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Upload an .xlsx file using the VInvoice 24-column format.',
-                        style: TextStyle(color: AppTheme.secondaryText),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            if (fileName != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primaryDark, AppTheme.primary],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: .15),
+            blurRadius: 22,
+            offset: const Offset(0, 9),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.table_view_outlined, color: Colors.white, size: 26),
+              SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.description_outlined),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(fileName!, overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Historical Invoice Import',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'VInvoice 24-column Excel format',
+                      style: TextStyle(color: Colors.white70, fontSize: 10),
                     ),
                   ],
                 ),
               ),
             ],
+          ),
 
-            const SizedBox(height: 18),
-
-            FilledButton.icon(
-              onPressed: reading ? null : onPick,
-              icon: reading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.upload_file_rounded),
-              label: Text(reading ? 'Reading Excel...' : 'Select Excel File'),
-            ),
-
-            const SizedBox(height: 10),
-
-            OutlinedButton.icon(
-              onPressed: templateBusy ? null : onTemplate,
-              icon: const Icon(Icons.download_outlined),
-              label: Text(
-                templateBusy
-                    ? 'Preparing Template...'
-                    : 'Download Import Template',
+          if (fileName != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.description_outlined,
+                    color: Colors.white70,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      fileName!,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
-        ),
+
+          const SizedBox(height: 16),
+
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: AppTheme.primaryDark,
+            ),
+            onPressed: reading ? null : onPick,
+            icon: reading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.upload_file_rounded),
+            label: Text(reading ? 'Reading Excel...' : 'Select Excel File'),
+          ),
+
+          const SizedBox(height: 9),
+
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: BorderSide(color: Colors.white.withValues(alpha: .45)),
+            ),
+            onPressed: templateBusy ? null : onTemplate,
+            icon: const Icon(Icons.download_outlined),
+            label: Text(
+              templateBusy
+                  ? 'Preparing Template...'
+                  : 'Download Import Template',
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _PreviewSummary extends StatelessWidget {
-  final InvoiceImportPreview preview;
-
   const _PreviewSummary({required this.preview});
+
+  final InvoiceImportPreview preview;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Validation Summary',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 16),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 2.25,
-              children: [
-                _CountTile(title: 'Invoices', value: preview.totalInvoices),
-                _CountTile(title: 'Rows', value: preview.totalRows),
-                _CountTile(title: 'Ready', value: preview.readyCount),
-                _CountTile(title: 'Duplicates', value: preview.duplicateCount),
-                _CountTile(
-                  title: 'Missing Party',
-                  value: preview.missingPartyCount,
-                ),
-                _CountTile(title: 'Invalid', value: preview.invalidCount),
-              ],
-            ),
-          ],
-        ),
+    return _ImportSection(
+      title: 'Validation Summary',
+      icon: Icons.fact_check_outlined,
+      child: GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 9,
+        crossAxisSpacing: 9,
+        childAspectRatio: 2.15,
+        children: [
+          _CountTile(title: 'Invoices', value: preview.totalInvoices),
+          _CountTile(title: 'Rows', value: preview.totalRows),
+          _CountTile(
+            title: 'Ready',
+            value: preview.readyCount,
+            semantic: preview.readyCount > 0
+                ? _CountSemantic.success
+                : _CountSemantic.normal,
+          ),
+          _CountTile(
+            title: 'Duplicates',
+            value: preview.duplicateCount,
+            semantic: preview.duplicateCount > 0
+                ? _CountSemantic.warning
+                : _CountSemantic.normal,
+          ),
+          _CountTile(
+            title: 'Missing Party',
+            value: preview.missingPartyCount,
+            semantic: preview.missingPartyCount > 0
+                ? _CountSemantic.warning
+                : _CountSemantic.normal,
+          ),
+          _CountTile(
+            title: 'Invalid',
+            value: preview.invalidCount,
+            semantic: preview.invalidCount > 0
+                ? _CountSemantic.danger
+                : _CountSemantic.normal,
+          ),
+        ],
       ),
     );
   }
 }
 
+enum _CountSemantic { normal, success, warning, danger }
+
 class _CountTile extends StatelessWidget {
+  const _CountTile({
+    required this.title,
+    required this.value,
+    this.semantic = _CountSemantic.normal,
+  });
+
   final String title;
   final int value;
-
-  const _CountTile({required this.title, required this.value});
+  final _CountSemantic semantic;
 
   @override
   Widget build(BuildContext context) {
+    Color background;
+    Color foreground;
+
+    switch (semantic) {
+      case _CountSemantic.success:
+        background = AppTheme.successSoft;
+        foreground = AppTheme.success;
+        break;
+      case _CountSemantic.warning:
+        background = AppTheme.warningSoft;
+        foreground = AppTheme.warning;
+        break;
+      case _CountSemantic.danger:
+        background = AppTheme.danger.withValues(alpha: .08);
+        foreground = AppTheme.danger;
+        break;
+      case _CountSemantic.normal:
+        background = AppTheme.surfaceMuted;
+        foreground = AppTheme.darkText;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        color: background,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
           Text(
             '$value',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              color: foreground,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 9),
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(color: AppTheme.secondaryText),
+              style: const TextStyle(
+                color: AppTheme.secondaryText,
+                fontSize: 10,
+              ),
             ),
           ),
         ],
@@ -567,235 +638,339 @@ class _CountTile extends StatelessWidget {
 }
 
 class _FileIssuesCard extends StatelessWidget {
-  final List<ImportIssue> issues;
-
   const _FileIssuesCard({required this.issues});
+
+  final List<ImportIssue> issues;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.report_problem_outlined),
-                SizedBox(width: 8),
-                Text(
-                  'File Issues',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            for (final issue in issues)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Text(
-                  '${issue.severity == ImportIssueSeverity.error ? 'ERROR' : 'WARNING'}'
-                  '${issue.excelRow == null ? '' : ' \u2022 Row ${issue.excelRow}'}'
-                  ': ${issue.message}',
+    return _ImportSection(
+      title: 'File Issues',
+      icon: Icons.report_problem_outlined,
+      child: Column(
+        children: [
+          for (final issue in issues)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 7),
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: issue.severity == ImportIssueSeverity.error
+                    ? AppTheme.danger.withValues(alpha: .06)
+                    : AppTheme.warningSoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${issue.severity == ImportIssueSeverity.error ? 'ERROR' : 'WARNING'}'
+                '${issue.excelRow == null ? '' : ' \u2022 Row ${issue.excelRow}'}'
+                ': ${issue.message}',
+                style: TextStyle(
+                  color: issue.severity == ImportIssueSeverity.error
+                      ? AppTheme.danger
+                      : AppTheme.warning,
+                  fontSize: 10,
+                  height: 1.4,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
 }
 
 class _DuplicateOptions extends StatelessWidget {
-  final int duplicateCount;
-  final bool overwrite;
-  final ValueChanged<bool> onChanged;
-
   const _DuplicateOptions({
     required this.duplicateCount,
     required this.overwrite,
     required this.onChanged,
   });
 
+  final int duplicateCount;
+  final bool overwrite;
+  final ValueChanged<bool> onChanged;
+
   @override
   Widget build(BuildContext context) {
-    if (duplicateCount == 0) {
-      return const SizedBox.shrink();
-    }
+    return _ImportSection(
+      title: 'Duplicate Handling',
+      icon: Icons.copy_all_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: AppTheme.warningSoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: AppTheme.warning,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '$duplicateCount duplicate invoice(s) detected using Company + Invoice Number.',
+                    style: const TextStyle(
+                      color: AppTheme.warning,
+                      fontSize: 10,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '$duplicateCount duplicate invoice(s) detected',
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Duplicates are detected using Company + Invoice Number.',
-              style: TextStyle(color: AppTheme.secondaryText),
-            ),
-            const SizedBox(height: 12),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: overwrite,
-              onChanged: onChanged,
-              title: Text(
-                overwrite ? 'Overwrite duplicates' : 'Skip duplicates',
-              ),
-              subtitle: Text(
-                overwrite
-                    ? 'Existing invoice header and items will be replaced.'
-                    : 'Existing invoices will remain unchanged.',
+          const SizedBox(height: 10),
+
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: overwrite,
+            onChanged: onChanged,
+            title: Text(
+              overwrite ? 'Overwrite duplicates' : 'Skip duplicates',
+              style: const TextStyle(
+                color: AppTheme.darkText,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ],
-        ),
+            subtitle: Text(
+              overwrite
+                  ? 'Existing invoice header and items will be replaced.'
+                  : 'Existing invoices remain unchanged.',
+              style: const TextStyle(fontSize: 10),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _InvoicePreviewList extends StatelessWidget {
-  final InvoiceImportPreview preview;
-
   const _InvoicePreviewList({required this.preview});
+
+  final InvoiceImportPreview preview;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Invoice Preview',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+    return _ImportSection(
+      title: 'Invoice Preview',
+      icon: Icons.preview_outlined,
+      child: preview.invoices.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(child: Text('No invoices available for preview.')),
+            )
+          : Column(
+              children: [
+                for (final invoice in preview.invoices)
+                  _PreviewInvoiceTile(invoice: invoice),
+              ],
             ),
-            const SizedBox(height: 10),
-
-            if (preview.invoices.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Center(
-                  child: Text('No invoices available for preview.'),
-                ),
-              )
-            else
-              for (final invoice in preview.invoices)
-                _PreviewInvoiceTile(invoice: invoice),
-          ],
-        ),
-      ),
     );
   }
 }
 
 class _PreviewInvoiceTile extends StatelessWidget {
-  final ImportInvoiceGroup invoice;
-
   const _PreviewInvoiceTile({required this.invoice});
+
+  final ImportInvoiceGroup invoice;
 
   @override
   Widget build(BuildContext context) {
     final first = invoice.first;
 
     String status;
+    Color statusColor;
+    Color statusBackground;
 
     if (invoice.hasErrors) {
       status = 'INVALID';
+      statusColor = AppTheme.danger;
+      statusBackground = AppTheme.danger.withValues(alpha: .07);
     } else if (invoice.duplicate) {
       status = 'DUPLICATE';
+      statusColor = AppTheme.warning;
+      statusBackground = AppTheme.warningSoft;
     } else if (invoice.missingParty) {
-      status = 'READY \u2022 NEW PARTY';
+      status = 'READY + PARTY';
+      statusColor = AppTheme.primary;
+      statusBackground = AppTheme.primarySoft;
     } else {
       status = 'READY';
+      statusColor = AppTheme.success;
+      statusBackground = AppTheme.successSoft;
     }
 
-    return ExpansionTile(
-      tilePadding: EdgeInsets.zero,
-      childrenPadding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
-      title: Text(
-        invoice.invoiceNumber,
-        style: const TextStyle(fontWeight: FontWeight.w700),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(14),
       ),
-      subtitle: Text(
-        '${first.partyName} \u2022 ${invoice.rows.length} item(s)',
-      ),
-      trailing: Text(
-        status,
-        textAlign: TextAlign.right,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: invoice.hasErrors ? Theme.of(context).colorScheme.error : null,
+      child: ExpansionTile(
+        shape: const Border(),
+        collapsedShape: const Border(),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 2),
+        childrenPadding: const EdgeInsets.fromLTRB(13, 0, 13, 13),
+        title: Text(
+          invoice.invoiceNumber,
+          style: const TextStyle(
+            color: AppTheme.darkText,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+          ),
         ),
-      ),
-      children: [
-        _PreviewLine(
-          label: 'Invoice Date',
-          value: DateFormat('dd-MM-yyyy').format(first.invoiceDate),
+        subtitle: Text(
+          '${first.partyName} \u2022 ${invoice.rows.length} item(s)',
+          style: const TextStyle(color: AppTheme.secondaryText, fontSize: 9),
         ),
-        _PreviewLine(label: 'Party', value: first.partyName),
-        _PreviewLine(label: 'Items', value: '${invoice.rows.length}'),
-        if (first.vendorCode.isNotEmpty)
-          _PreviewLine(label: 'Vendor Code', value: first.vendorCode),
-        if (first.sitePlant.isNotEmpty)
-          _PreviewLine(label: 'Site / Plant', value: first.sitePlant),
-
-        if (invoice.issues.isNotEmpty) ...[
-          const Divider(height: 22),
-          for (final issue in invoice.issues)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 5),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    issue.severity == ImportIssueSeverity.error
-                        ? Icons.error_outline
-                        : Icons.warning_amber_rounded,
-                    size: 17,
-                  ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: Text(
-                      '${issue.excelRow == null ? '' : 'Row ${issue.excelRow}: '}${issue.message}',
-                    ),
-                  ),
-                ],
-              ),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          decoration: BoxDecoration(
+            color: statusBackground,
+            borderRadius: BorderRadius.circular(99),
+          ),
+          child: Text(
+            status,
+            style: TextStyle(
+              color: statusColor,
+              fontSize: 8,
+              fontWeight: FontWeight.w800,
             ),
+          ),
+        ),
+        children: [
+          _PreviewLine(
+            label: 'Invoice Date',
+            value: DateFormat('dd-MM-yyyy').format(first.invoiceDate),
+          ),
+          _PreviewLine(label: 'Party', value: first.partyName),
+          _PreviewLine(label: 'Items', value: '${invoice.rows.length}'),
+          if (first.vendorCode.isNotEmpty)
+            _PreviewLine(label: 'Vendor Code', value: first.vendorCode),
+          if (first.sitePlant.isNotEmpty)
+            _PreviewLine(label: 'Site / Plant', value: first.sitePlant),
+
+          if (invoice.issues.isNotEmpty) ...[
+            const Divider(height: 22),
+            for (final issue in invoice.issues)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 5),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      issue.severity == ImportIssueSeverity.error
+                          ? Icons.error_outline_rounded
+                          : Icons.warning_amber_rounded,
+                      size: 16,
+                      color: issue.severity == ImportIssueSeverity.error
+                          ? AppTheme.danger
+                          : AppTheme.warning,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${issue.excelRow == null ? '' : 'Row ${issue.excelRow}: '}${issue.message}',
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
 
 class _PreviewLine extends StatelessWidget {
+  const _PreviewLine({required this.label, required this.value});
+
   final String label;
   final String value;
-
-  const _PreviewLine({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 110,
+            width: 105,
             child: Text(
               label,
-              style: const TextStyle(color: AppTheme.secondaryText),
+              style: const TextStyle(
+                color: AppTheme.secondaryText,
+                fontSize: 10,
+              ),
             ),
           ),
-          Expanded(child: Text(value)),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 10))),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImportSection extends StatelessWidget {
+  const _ImportSection({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(icon, color: AppTheme.primary, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppTheme.darkText,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 13),
+          child,
         ],
       ),
     );
@@ -813,7 +988,11 @@ class _HistoryHeading extends StatelessWidget {
         SizedBox(width: 9),
         Text(
           'Import History',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          style: TextStyle(
+            color: AppTheme.darkText,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ],
     );
@@ -832,13 +1011,36 @@ class _ImportHistory extends ConsumerWidget {
         padding: EdgeInsets.all(24),
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (error, stack) => Text('Unable to load import history.\n$error'),
+      error: (error, stack) => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: Text(
+          'Unable to load import history.\n$error',
+          textAlign: TextAlign.center,
+        ),
+      ),
       data: (records) {
         if (records.isEmpty) {
-          return const Card(
-            child: Padding(
-              padding: EdgeInsets.all(22),
-              child: Text('No Excel imports yet.', textAlign: TextAlign.center),
+          return Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: const Column(
+              children: [
+                Icon(Icons.table_view_outlined, color: AppTheme.tertiaryText),
+                SizedBox(height: 8),
+                Text(
+                  'No Excel imports yet.',
+                  style: TextStyle(color: AppTheme.secondaryText),
+                ),
+              ],
             ),
           );
         }
@@ -846,26 +1048,85 @@ class _ImportHistory extends ConsumerWidget {
         return Column(
           children: [
             for (final record in records)
-              Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.table_view_outlined),
-                  ),
-                  title: Text(record.fileName, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(
-                    '${DateFormat('dd-MM-yyyy HH:mm').format(record.importedAt)}\n'
-                    'Rows ${record.totalRows} \u2022 Imported ${record.importedCount} \u2022 '
-                    'Skipped ${record.skippedCount} \u2022 Failed ${record.failedCount}',
-                  ),
-                  isThreeLine: true,
-                  trailing: Text(
-                    record.status.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
+              Container(
+                margin: const EdgeInsets.only(bottom: 9),
+                padding: const EdgeInsets.all(13),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primarySoft,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.table_view_outlined,
+                        color: AppTheme.primary,
+                        size: 19,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            record.fileName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppTheme.darkText,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            DateFormat(
+                              'dd MMM yyyy, HH:mm',
+                            ).format(record.importedAt),
+                            style: const TextStyle(
+                              color: AppTheme.secondaryText,
+                              fontSize: 9,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Rows ${record.totalRows}  \u2022  Imported ${record.importedCount}  \u2022  Skipped ${record.skippedCount}  \u2022  Failed ${record.failedCount}',
+                            style: const TextStyle(
+                              color: AppTheme.secondaryText,
+                              fontSize: 9,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.successSoft,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        record.status.toUpperCase(),
+                        style: const TextStyle(
+                          color: AppTheme.success,
+                          fontSize: 7,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -876,19 +1137,19 @@ class _ImportHistory extends ConsumerWidget {
 }
 
 class _ResultLine extends StatelessWidget {
+  const _ResultLine({required this.label, required this.value});
+
   final String label;
   final int value;
-
-  const _ResultLine({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Expanded(child: Text(label)),
-          Text('$value', style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text('$value', style: const TextStyle(fontWeight: FontWeight.w800)),
         ],
       ),
     );

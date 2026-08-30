@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../invoices/screens/invoice_list_screen.dart';
 import '../../parties/screens/parties_screen.dart';
+import '../../notes/screens/notes_screen.dart';
 import 'dashboard_screen.dart';
 
 class AppShell extends StatefulWidget {
@@ -48,11 +49,8 @@ class _AppShellState extends State<AppShell> {
     DashboardScreen(),
     InvoiceListScreen(),
     PartiesScreen(),
-    PlaceholderPage(
-      icon: Icons.note_alt_rounded,
-      title: 'Notes',
-      subtitle: 'Keep important business notes in one place.',
-    ),
+    NotesScreen(),
+
     MorePage(),
   ];
 
@@ -426,89 +424,6 @@ class _AppDestination {
 }
 
 // ============================================================================
-// NOTES PLACEHOLDER
-// ============================================================================
-
-class PlaceholderPage extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const PlaceholderPage({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 5),
-            Text(
-              subtitle,
-              style: const TextStyle(color: AppTheme.secondaryText),
-            ),
-            const SizedBox(height: 32),
-            Expanded(
-              child: Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppTheme.border),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 68,
-                        height: 68,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primarySoft,
-                          borderRadius: BorderRadius.circular(21),
-                        ),
-                        child: Icon(icon, size: 31, color: AppTheme.primary),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Coming soon',
-                        style: TextStyle(
-                          color: AppTheme.darkText,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      const Text(
-                        'This workspace will be available in a future development stage.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppTheme.secondaryText,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
 // MORE
 // ============================================================================
 
@@ -517,85 +432,171 @@ class MorePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      (
-        Icons.apartment_rounded,
-        'My Company',
-        'Letterhead & company profile',
-        '/company',
-      ),
-      (
-        Icons.numbers_rounded,
-        'Vendor Codes',
-        'Manage vendor codes',
-        '/vendor-codes',
-      ),
-      (
-        Icons.location_on_outlined,
-        'Sites / Plants',
-        'Manage sites and plants',
-        '/sites',
-      ),
-      (
-        Icons.straighten_rounded,
-        'Units',
-        'EA, Days, Months, KM and more',
-        '/units',
-      ),
-      (
-        Icons.percent_rounded,
-        'GST & Tax',
-        'Tax rates and tax settings',
-        '/tax-rates',
-      ),
-      (
-        Icons.upload_file_rounded,
-        'Import Excel',
-        'Import previous invoices',
-        '/import-excel',
-      ),
-      (Icons.settings_outlined, 'Settings', 'Application preferences', ''),
-    ];
-
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
         children: [
-          Text('More', style: Theme.of(context).textTheme.headlineMedium),
+          const _MoreHero(),
 
-          const SizedBox(height: 5),
+          const SizedBox(height: 18),
 
-          const Text(
-            'Masters, import tools and business settings.',
-            style: TextStyle(color: AppTheme.secondaryText),
+          const _MoreSectionHeading(
+            title: 'Business Setup',
+            subtitle: 'Company identity and customer-specific master data',
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 9),
 
-          Container(
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: AppTheme.border),
-            ),
+          _MoreGroup(
+            items: [
+              _MoreEntry(
+                icon: Icons.apartment_rounded,
+                title: 'My Company',
+                subtitle: 'Letterhead, GST, PAN, address and contacts',
+                onTap: () => context.push('/company'),
+              ),
+              _MoreEntry(
+                icon: Icons.numbers_rounded,
+                title: 'Vendor Codes',
+                subtitle: 'Customer billing reference codes',
+                onTap: () => context.push('/vendor-codes'),
+              ),
+              _MoreEntry(
+                icon: Icons.location_on_outlined,
+                title: 'Sites / Plants',
+                subtitle: 'Customer sites and service locations',
+                onTap: () => context.push('/sites'),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          const _MoreSectionHeading(
+            title: 'Invoice Masters',
+            subtitle: 'Values used while creating invoice services and tax',
+          ),
+
+          const SizedBox(height: 9),
+
+          _MoreGroup(
+            items: [
+              _MoreEntry(
+                icon: Icons.straighten_rounded,
+                title: 'Units',
+                subtitle: 'EA, Days, Months, KM and custom units',
+                onTap: () => context.push('/units'),
+              ),
+              _MoreEntry(
+                icon: Icons.percent_rounded,
+                title: 'GST & Tax',
+                subtitle: 'CGST, SGST, IGST and custom tax rates',
+                onTap: () => context.push('/tax-rates'),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          const _MoreSectionHeading(
+            title: 'Data Tools',
+            subtitle: 'Bring historical invoice data into VInvoice',
+          ),
+
+          const SizedBox(height: 9),
+
+          _MoreGroup(
+            items: [
+              _MoreEntry(
+                icon: Icons.upload_file_rounded,
+                title: 'Import Excel',
+                subtitle: 'Validate and import historical invoices',
+                onTap: () => context.push('/import-excel'),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          const _MoreSectionHeading(
+            title: 'Application',
+            subtitle: 'Additional preferences and configuration',
+          ),
+
+          const SizedBox(height: 9),
+
+          _MoreGroup(
+            items: [
+              _MoreEntry(
+                icon: Icons.settings_outlined,
+                title: 'Settings',
+                subtitle: 'More application preferences coming later',
+                badge: 'SOON',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Additional settings will be available in a future milestone.',
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          const _MoreFooter(),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoreHero extends StatelessWidget {
+  const _MoreHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(19),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primaryDark, AppTheme.primary],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: .15),
+            blurRadius: 22,
+            offset: const Offset(0, 9),
+          ),
+        ],
+      ),
+      child: const Row(
+        children: [
+          _BrandMark(),
+          SizedBox(width: 14),
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (var index = 0; index < items.length; index++) ...[
-                  _MoreItem(
-                    icon: items[index].$1,
-                    title: items[index].$2,
-                    subtitle: items[index].$3,
-                    onTap: () {
-                      final route = items[index].$4;
-
-                      if (route.isNotEmpty) {
-                        context.push(route);
-                      }
-                    },
+                Text(
+                  'VInvoice Control Center',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
                   ),
-                  if (index < items.length - 1)
-                    const Divider(indent: 76, height: 1),
-                ],
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Business setup, masters and data tools',
+                  style: TextStyle(color: Colors.white70, fontSize: 10),
+                ),
               ],
             ),
           ),
@@ -605,70 +606,191 @@ class MorePage extends StatelessWidget {
   }
 }
 
-class _MoreItem extends StatelessWidget {
-  const _MoreItem({
+class _MoreSectionHeading extends StatelessWidget {
+  const _MoreSectionHeading({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppTheme.darkText,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: const TextStyle(color: AppTheme.secondaryText, fontSize: 9),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoreGroup extends StatelessWidget {
+  const _MoreGroup({required this.items});
+
+  final List<_MoreEntry> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        children: [
+          for (var index = 0; index < items.length; index++) ...[
+            items[index],
+            if (index < items.length - 1)
+              const Divider(height: 1, indent: 70, endIndent: 14),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MoreEntry extends StatelessWidget {
+  const _MoreEntry({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.badge,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final String? badge;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 color: AppTheme.primarySoft,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(icon, color: AppTheme.primary, size: 21),
+              child: Icon(icon, color: AppTheme.primary, size: 20),
             ),
 
-            const SizedBox(width: 14),
+            const SizedBox(width: 13),
 
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: AppTheme.darkText,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            color: AppTheme.darkText,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (badge != null) ...[
+                        const SizedBox(width: 7),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceMuted,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            badge!,
+                            style: const TextStyle(
+                              color: AppTheme.secondaryText,
+                              fontSize: 7,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Text(
                     subtitle,
                     style: const TextStyle(
                       color: AppTheme.secondaryText,
-                      fontSize: 12,
+                      fontSize: 10,
                     ),
                   ),
                 ],
               ),
             ),
 
+            const SizedBox(width: 8),
+
             const Icon(
               Icons.chevron_right_rounded,
               color: AppTheme.tertiaryText,
-              size: 21,
+              size: 20,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MoreFooter extends StatelessWidget {
+  const _MoreFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceMuted,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.storage_rounded, color: AppTheme.secondaryText, size: 18),
+          SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              'VInvoice currently stores your invoicing data locally on this device.',
+              style: TextStyle(
+                color: AppTheme.secondaryText,
+                fontSize: 9,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
