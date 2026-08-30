@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../invoices/screens/invoice_list_screen.dart';
 import '../../parties/screens/parties_screen.dart';
 import '../../notes/screens/notes_screen.dart';
+import '../../reports/screens/reports_screen.dart';
 import 'dashboard_screen.dart';
 
 class AppShell extends StatefulWidget {
@@ -34,9 +35,9 @@ class _AppShellState extends State<AppShell> {
       selectedIcon: Icons.business_rounded,
     ),
     _AppDestination(
-      label: 'Notes',
-      icon: Icons.note_alt_outlined,
-      selectedIcon: Icons.note_alt_rounded,
+      label: 'Reports',
+      icon: Icons.analytics_outlined,
+      selectedIcon: Icons.analytics_rounded,
     ),
     _AppDestination(
       label: 'More',
@@ -49,7 +50,7 @@ class _AppShellState extends State<AppShell> {
     DashboardScreen(),
     InvoiceListScreen(),
     PartiesScreen(),
-    NotesScreen(),
+    ReportsScreen(),
 
     MorePage(),
   ];
@@ -527,6 +528,18 @@ class MorePage extends StatelessWidget {
 
           _MoreGroup(
             items: [
+              _MoreEntry(
+                icon: Icons.note_alt_outlined,
+                title: 'Notes',
+                subtitle: 'Business reminders and important information',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const NotesScreen(),
+                    ),
+                  );
+                },
+              ),
               _MoreEntry(
                 icon: Icons.settings_outlined,
                 title: 'Settings',
