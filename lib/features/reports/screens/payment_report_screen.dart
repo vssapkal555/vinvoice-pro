@@ -5,6 +5,8 @@ import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
 import '../models/report_date_range.dart';
+import '../services/report_excel_export_service.dart';
+import '../services/report_pdf_export_service.dart';
 
 class PaymentReportScreen extends StatefulWidget {
   const PaymentReportScreen({
@@ -70,6 +72,176 @@ class _PaymentReportScreenState extends State<PaymentReportScreen> {
     }).toList();
   }
 
+  Future<void> _exportExcel(List<_PaymentReportRow> rows) async {
+    final period = widget.range.start == null || widget.range.end == null
+        ? 'All Time'
+        : '${DateFormat('dd MMM yyyy').format(widget.range.start!)} - '
+              '${DateFormat('dd MMM yyyy').format(widget.range.end!)}';
+
+    String friendlyPaymentMode(String value) {
+      switch (value.trim().toLowerCase()) {
+        case 'cash':
+          return 'Cash';
+        case 'banktransfer':
+        case 'bank_transfer':
+          return 'Bank Transfer';
+        case 'upi':
+          return 'UPI';
+        case 'cheque':
+        case 'check':
+          return 'Cheque';
+        case 'card':
+          return 'Card';
+        case 'neft':
+          return 'NEFT';
+        case 'rtgs':
+          return 'RTGS';
+        case 'imps':
+          return 'IMPS';
+        default:
+          final raw = value.trim();
+
+          if (raw.isEmpty) {
+            return '-';
+          }
+
+          final spaced = raw
+              .replaceAll('_', ' ')
+              .replaceAllMapped(
+                RegExp(r'([a-z])([A-Z])'),
+                (match) => '${match.group(1)} ${match.group(2)}',
+              );
+
+          return spaced
+              .split(RegExp(r'\s+'))
+              .map(
+                (word) => word.isEmpty
+                    ? word
+                    : '${word[0].toUpperCase()}'
+                          '${word.substring(1).toLowerCase()}',
+              )
+              .join(' ');
+      }
+    }
+
+    final total = rows.fold<int>(
+      0,
+      (sum, row) => sum + row.payment.amountPaise,
+    );
+
+    try {
+      await ReportExcelExportService.exportAndShare(
+        reportTitle: 'Payment Report',
+        fileName: 'payment_report',
+        metadata: [
+          ['Report Period', period],
+          ['Generated', DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())],
+          ['Search', _search.trim().isEmpty ? 'All' : _search.trim()],
+        ],
+        numericColumns: const {5},
+        headers: const [
+          'Payment Date',
+          'Invoice No',
+          'Party',
+          'Payment Mode',
+          'Reference',
+          'Amount',
+        ],
+        rows: rows.map((row) {
+          return [
+            DateFormat('dd-MM-yyyy').format(row.payment.paymentDate),
+            row.invoice.invoiceNumber,
+            row.invoice.partyNameSnapshot,
+            friendlyPaymentMode(row.payment.paymentMode),
+            row.payment.referenceNumber ?? '',
+            MoneyUtils.paiseToRupeesText(row.payment.amountPaise),
+          ];
+        }).toList(),
+        totalsRow: [
+          'TOTAL',
+          '',
+          '',
+          '',
+          '',
+          MoneyUtils.paiseToRupeesText(total),
+        ],
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Excel export failed: $error')));
+    }
+  }
+
+  Future<void> _exportPdf(List<_PaymentReportRow> rows) async {
+    final period = widget.range.start == null || widget.range.end == null
+        ? 'All Time'
+        : '${DateFormat('dd MMM yyyy').format(widget.range.start!)} - '
+              '${DateFormat('dd MMM yyyy').format(widget.range.end!)}';
+
+    String friendlyPaymentMode(String value) {
+      switch (value.trim().toLowerCase()) {
+        case 'cash':
+          return 'Cash';
+        case 'banktransfer':
+        case 'bank_transfer':
+          return 'Bank Transfer';
+        case 'upi':
+          return 'UPI';
+        case 'cheque':
+        case 'check':
+          return 'Cheque';
+        case 'card':
+          return 'Card';
+        case 'neft':
+          return 'NEFT';
+        case 'rtgs':
+          return 'RTGS';
+        case 'imps':
+          return 'IMPS';
+        default:
+          return value.trim().isEmpty ? '-' : value.trim();
+      }
+    }
+
+    final total = rows.fold<int>(
+      0,
+      (sum, row) => sum + row.payment.amountPaise,
+    );
+
+    await ReportPdfExportService.share(
+      reportTitle: 'Payment Report',
+      fileName: 'payment_report',
+      landscape: true,
+      metadata: [
+        ['Report Period', period],
+        ['Generated', DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())],
+        ['Search', _search.trim().isEmpty ? 'All' : _search.trim()],
+      ],
+      headers: const [
+        'Payment Date',
+        'Invoice No',
+        'Party',
+        'Payment Mode',
+        'Reference',
+        'Amount',
+      ],
+      rows: rows.map((row) {
+        return [
+          DateFormat('dd-MM-yyyy').format(row.payment.paymentDate),
+          row.invoice.invoiceNumber,
+          row.invoice.partyNameSnapshot,
+          friendlyPaymentMode(row.payment.paymentMode),
+          row.payment.referenceNumber ?? '',
+          MoneyUtils.paiseToRupeesText(row.payment.amountPaise),
+        ];
+      }).toList(),
+      totalsRow: ['TOTAL', '', '', '', '', MoneyUtils.paiseToRupeesText(total)],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rows = _rows;
@@ -92,6 +264,18 @@ class _PaymentReportScreenState extends State<PaymentReportScreen> {
         title: const Text('Payment Report'),
         backgroundColor: AppTheme.background,
         surfaceTintColor: Colors.transparent,
+        actions: [
+          IconButton(
+            tooltip: 'Export Excel',
+            onPressed: rows.isEmpty ? null : () => _exportExcel(rows),
+            icon: const Icon(Icons.file_download_outlined),
+          ),
+          IconButton(
+            tooltip: 'Export PDF',
+            onPressed: rows.isEmpty ? null : () => _exportPdf(rows),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+          ),
+        ],
       ),
       body: SafeArea(
         child: ListView(

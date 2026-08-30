@@ -5,6 +5,8 @@ import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
 import '../models/report_date_range.dart';
+import '../services/report_excel_export_service.dart';
+import '../services/report_pdf_export_service.dart';
 
 class InvoiceReportScreen extends StatefulWidget {
   const InvoiceReportScreen({
@@ -102,6 +104,156 @@ class _InvoiceReportScreenState extends State<InvoiceReportScreen> {
     }).toList();
   }
 
+  Future<void> _exportExcel(List<_InvoiceReportRow> rows) async {
+    final period = widget.range.start == null || widget.range.end == null
+        ? 'All Time'
+        : '${DateFormat('dd MMM yyyy').format(widget.range.start!)} - '
+              '${DateFormat('dd MMM yyyy').format(widget.range.end!)}';
+
+    final issuedRows = rows.where(
+      (row) => row.invoice.status.toLowerCase() == 'issued',
+    );
+
+    final totalInvoice = issuedRows.fold<int>(
+      0,
+      (sum, row) => sum + row.invoice.grandTotalPaise,
+    );
+
+    final totalPaid = issuedRows.fold<int>(
+      0,
+      (sum, row) => sum + row.paidPaise,
+    );
+
+    final totalOutstanding = issuedRows.fold<int>(
+      0,
+      (sum, row) => sum + row.outstandingPaise,
+    );
+
+    try {
+      await ReportExcelExportService.exportAndShare(
+        reportTitle: 'Invoice Report',
+        fileName: 'invoice_report',
+        metadata: [
+          ['Report Period', period],
+          ['Generated', DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())],
+          ['Invoice Status', _status],
+          ['Payment Status', _paymentStatus],
+          ['Search', _search.trim().isEmpty ? 'All' : _search.trim()],
+        ],
+        numericColumns: const {5, 6, 7},
+        headers: const [
+          'Invoice No',
+          'Invoice Date',
+          'Party',
+          'Invoice Status',
+          'Payment Status',
+          'Grand Total',
+          'Paid',
+          'Outstanding',
+        ],
+        rows: rows.map((row) {
+          return [
+            row.invoice.invoiceNumber,
+            DateFormat('dd-MM-yyyy').format(row.invoice.invoiceDate),
+            row.invoice.partyNameSnapshot,
+            row.invoice.status.toUpperCase(),
+            row.paymentStatus,
+            MoneyUtils.paiseToRupeesText(row.invoice.grandTotalPaise),
+            MoneyUtils.paiseToRupeesText(row.paidPaise),
+            MoneyUtils.paiseToRupeesText(row.outstandingPaise),
+          ];
+        }).toList(),
+        totalsRow: [
+          'TOTAL',
+          '',
+          '',
+          '',
+          '',
+          MoneyUtils.paiseToRupeesText(totalInvoice),
+          MoneyUtils.paiseToRupeesText(totalPaid),
+          MoneyUtils.paiseToRupeesText(totalOutstanding),
+        ],
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Excel export failed: $error')));
+    }
+  }
+
+  Future<void> _exportPdf(List<_InvoiceReportRow> rows) async {
+    final period = widget.range.start == null || widget.range.end == null
+        ? 'All Time'
+        : '${DateFormat('dd MMM yyyy').format(widget.range.start!)} - '
+              '${DateFormat('dd MMM yyyy').format(widget.range.end!)}';
+
+    final issuedRows = rows.where(
+      (row) => row.invoice.status.toLowerCase() == 'issued',
+    );
+
+    final totalInvoice = issuedRows.fold<int>(
+      0,
+      (sum, row) => sum + row.invoice.grandTotalPaise,
+    );
+
+    final totalPaid = issuedRows.fold<int>(
+      0,
+      (sum, row) => sum + row.paidPaise,
+    );
+
+    final totalOutstanding = issuedRows.fold<int>(
+      0,
+      (sum, row) => sum + row.outstandingPaise,
+    );
+
+    await ReportPdfExportService.share(
+      reportTitle: 'Invoice Report',
+      fileName: 'invoice_report',
+      landscape: true,
+      metadata: [
+        ['Report Period', period],
+        ['Generated', DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())],
+        ['Invoice Status', _status],
+        ['Payment Status', _paymentStatus],
+        ['Search', _search.trim().isEmpty ? 'All' : _search.trim()],
+      ],
+      headers: const [
+        'Invoice No',
+        'Date',
+        'Party',
+        'Invoice Status',
+        'Payment Status',
+        'Grand Total',
+        'Paid',
+        'Outstanding',
+      ],
+      rows: rows.map((row) {
+        return [
+          row.invoice.invoiceNumber,
+          DateFormat('dd-MM-yyyy').format(row.invoice.invoiceDate),
+          row.invoice.partyNameSnapshot,
+          row.invoice.status.toUpperCase(),
+          row.paymentStatus,
+          MoneyUtils.paiseToRupeesText(row.invoice.grandTotalPaise),
+          MoneyUtils.paiseToRupeesText(row.paidPaise),
+          MoneyUtils.paiseToRupeesText(row.outstandingPaise),
+        ];
+      }).toList(),
+      totalsRow: [
+        'TOTAL',
+        '',
+        '',
+        '',
+        '',
+        MoneyUtils.paiseToRupeesText(totalInvoice),
+        MoneyUtils.paiseToRupeesText(totalPaid),
+        MoneyUtils.paiseToRupeesText(totalOutstanding),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rows = _rows;
@@ -128,6 +280,18 @@ class _InvoiceReportScreenState extends State<InvoiceReportScreen> {
         title: const Text('Invoice Report'),
         backgroundColor: AppTheme.background,
         surfaceTintColor: Colors.transparent,
+        actions: [
+          IconButton(
+            tooltip: 'Export Excel',
+            onPressed: rows.isEmpty ? null : () => _exportExcel(rows),
+            icon: const Icon(Icons.file_download_outlined),
+          ),
+          IconButton(
+            tooltip: 'Export PDF',
+            onPressed: rows.isEmpty ? null : () => _exportPdf(rows),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+          ),
+        ],
       ),
       body: SafeArea(
         child: ListView(

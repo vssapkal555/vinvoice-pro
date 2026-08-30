@@ -5,6 +5,8 @@ import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
 import '../models/report_date_range.dart';
+import '../services/report_excel_export_service.dart';
+import '../services/report_pdf_export_service.dart';
 
 class GstReportScreen extends StatefulWidget {
   const GstReportScreen({
@@ -48,6 +50,184 @@ class _GstReportScreenState extends State<GstReportScreen> {
     return rows;
   }
 
+  Future<void> _exportExcel(List<Invoice> rows) async {
+    final period = widget.range.start == null || widget.range.end == null
+        ? 'All Time'
+        : '${DateFormat('dd MMM yyyy').format(widget.range.start!)} - '
+              '${DateFormat('dd MMM yyyy').format(widget.range.end!)}';
+
+    final taxable = rows.fold<int>(
+      0,
+      (sum, invoice) => sum + invoice.taxableAmountPaise,
+    );
+
+    final cgst = rows.fold<int>(
+      0,
+      (sum, invoice) => sum + invoice.cgstAmountPaise,
+    );
+
+    final sgst = rows.fold<int>(
+      0,
+      (sum, invoice) => sum + invoice.sgstAmountPaise,
+    );
+
+    final igst = rows.fold<int>(
+      0,
+      (sum, invoice) => sum + invoice.igstAmountPaise,
+    );
+
+    final totalGst = cgst + sgst + igst;
+
+    final invoiceValue = rows.fold<int>(
+      0,
+      (sum, invoice) => sum + invoice.grandTotalPaise,
+    );
+
+    try {
+      await ReportExcelExportService.exportAndShare(
+        reportTitle: 'GST Report',
+        fileName: 'gst_report',
+        metadata: [
+          ['Report Period', period],
+          ['Generated', DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())],
+          ['Search', _search.trim().isEmpty ? 'All' : _search.trim()],
+        ],
+        numericColumns: const {3, 4, 5, 6, 7, 8},
+        headers: const [
+          'Invoice No',
+          'Invoice Date',
+          'Party',
+          'Taxable Value',
+          'CGST',
+          'SGST',
+          'IGST',
+          'Total GST',
+          'Invoice Value',
+        ],
+        rows: rows.map((invoice) {
+          final invoiceGst =
+              invoice.cgstAmountPaise +
+              invoice.sgstAmountPaise +
+              invoice.igstAmountPaise;
+
+          return [
+            invoice.invoiceNumber,
+            DateFormat('dd-MM-yyyy').format(invoice.invoiceDate),
+            invoice.partyNameSnapshot,
+            MoneyUtils.paiseToRupeesText(invoice.taxableAmountPaise),
+            MoneyUtils.paiseToRupeesText(invoice.cgstAmountPaise),
+            MoneyUtils.paiseToRupeesText(invoice.sgstAmountPaise),
+            MoneyUtils.paiseToRupeesText(invoice.igstAmountPaise),
+            MoneyUtils.paiseToRupeesText(invoiceGst),
+            MoneyUtils.paiseToRupeesText(invoice.grandTotalPaise),
+          ];
+        }).toList(),
+        totalsRow: [
+          'TOTAL',
+          '',
+          '',
+          MoneyUtils.paiseToRupeesText(taxable),
+          MoneyUtils.paiseToRupeesText(cgst),
+          MoneyUtils.paiseToRupeesText(sgst),
+          MoneyUtils.paiseToRupeesText(igst),
+          MoneyUtils.paiseToRupeesText(totalGst),
+          MoneyUtils.paiseToRupeesText(invoiceValue),
+        ],
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Excel export failed: $error')));
+    }
+  }
+
+  Future<void> _exportPdf(List<Invoice> rows) async {
+    final period = widget.range.start == null || widget.range.end == null
+        ? 'All Time'
+        : '${DateFormat('dd MMM yyyy').format(widget.range.start!)} - '
+              '${DateFormat('dd MMM yyyy').format(widget.range.end!)}';
+
+    final taxable = rows.fold<int>(
+      0,
+      (sum, invoice) => sum + invoice.taxableAmountPaise,
+    );
+
+    final cgst = rows.fold<int>(
+      0,
+      (sum, invoice) => sum + invoice.cgstAmountPaise,
+    );
+
+    final sgst = rows.fold<int>(
+      0,
+      (sum, invoice) => sum + invoice.sgstAmountPaise,
+    );
+
+    final igst = rows.fold<int>(
+      0,
+      (sum, invoice) => sum + invoice.igstAmountPaise,
+    );
+
+    final totalGst = cgst + sgst + igst;
+
+    final invoiceValue = rows.fold<int>(
+      0,
+      (sum, invoice) => sum + invoice.grandTotalPaise,
+    );
+
+    await ReportPdfExportService.share(
+      reportTitle: 'GST Report',
+      fileName: 'gst_report',
+      landscape: true,
+      metadata: [
+        ['Report Period', period],
+        ['Generated', DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())],
+        ['Search', _search.trim().isEmpty ? 'All' : _search.trim()],
+      ],
+      headers: const [
+        'Invoice No',
+        'Date',
+        'Party',
+        'Taxable',
+        'CGST',
+        'SGST',
+        'IGST',
+        'Total GST',
+        'Invoice Value',
+      ],
+      rows: rows.map((invoice) {
+        final invoiceGst =
+            invoice.cgstAmountPaise +
+            invoice.sgstAmountPaise +
+            invoice.igstAmountPaise;
+
+        return [
+          invoice.invoiceNumber,
+          DateFormat('dd-MM-yyyy').format(invoice.invoiceDate),
+          invoice.partyNameSnapshot,
+          MoneyUtils.paiseToRupeesText(invoice.taxableAmountPaise),
+          MoneyUtils.paiseToRupeesText(invoice.cgstAmountPaise),
+          MoneyUtils.paiseToRupeesText(invoice.sgstAmountPaise),
+          MoneyUtils.paiseToRupeesText(invoice.igstAmountPaise),
+          MoneyUtils.paiseToRupeesText(invoiceGst),
+          MoneyUtils.paiseToRupeesText(invoice.grandTotalPaise),
+        ];
+      }).toList(),
+      totalsRow: [
+        'TOTAL',
+        '',
+        '',
+        MoneyUtils.paiseToRupeesText(taxable),
+        MoneyUtils.paiseToRupeesText(cgst),
+        MoneyUtils.paiseToRupeesText(sgst),
+        MoneyUtils.paiseToRupeesText(igst),
+        MoneyUtils.paiseToRupeesText(totalGst),
+        MoneyUtils.paiseToRupeesText(invoiceValue),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rows = _rows;
@@ -85,6 +265,18 @@ class _GstReportScreenState extends State<GstReportScreen> {
         title: const Text('GST Report'),
         backgroundColor: AppTheme.background,
         surfaceTintColor: Colors.transparent,
+        actions: [
+          IconButton(
+            tooltip: 'Export Excel',
+            onPressed: rows.isEmpty ? null : () => _exportExcel(rows),
+            icon: const Icon(Icons.file_download_outlined),
+          ),
+          IconButton(
+            tooltip: 'Export PDF',
+            onPressed: rows.isEmpty ? null : () => _exportPdf(rows),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+          ),
+        ],
       ),
       body: SafeArea(
         child: ListView(
