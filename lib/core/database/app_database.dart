@@ -326,6 +326,41 @@ class Notes extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+class Expenses extends Table {
+  TextColumn get id => text().clientDefault(() => _uuid.v4())();
+
+  TextColumn get companyId =>
+      text().references(Companies, #id, onDelete: KeyAction.cascade)();
+
+  DateTimeColumn get expenseDate => dateTime()();
+
+  TextColumn get category => text()();
+
+  TextColumn get vendorPayee => text().nullable()();
+
+  TextColumn get description => text()();
+
+  IntColumn get baseAmountPaise => integer().withDefault(const Constant(0))();
+
+  IntColumn get gstAmountPaise => integer().withDefault(const Constant(0))();
+
+  IntColumn get totalAmountPaise => integer().withDefault(const Constant(0))();
+
+  // cash / bankTransfer / upi / cheque / card / other
+  TextColumn get paymentMode => text().nullable()();
+
+  TextColumn get referenceNumber => text().nullable()();
+
+  TextColumn get notes => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().clientDefault(DateTime.now)();
+
+  DateTimeColumn get updatedAt => dateTime().clientDefault(DateTime.now)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 class ImportBatches extends Table {
   TextColumn get id => text().clientDefault(() => _uuid.v4())();
 
@@ -367,6 +402,7 @@ class ImportBatches extends Table {
     InvoiceItems,
     Payments,
     Notes,
+    Expenses,
     ImportBatches,
   ],
 )
@@ -374,7 +410,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -384,6 +420,10 @@ class AppDatabase extends _$AppDatabase {
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
         await m.createTable(payments);
+      }
+
+      if (from < 3) {
+        await m.createTable(expenses);
       }
     },
     beforeOpen: (OpeningDetails details) async {
@@ -957,6 +997,64 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteNoteRecord(String noteId) {
     return (delete(notes)..where((row) => row.id.equals(noteId))).go();
+  }
+  // ---------------------------------------------------------------------------
+  // EXPENSES
+  // ---------------------------------------------------------------------------
+
+  Stream<List<Expense>> watchExpensesForCompany(String companyId) {
+    return (select(expenses)
+          ..where((row) => row.companyId.equals(companyId))
+          ..orderBy([
+            (row) => OrderingTerm(
+              expression: row.expenseDate,
+              mode: OrderingMode.desc,
+            ),
+            (row) => OrderingTerm(
+              expression: row.createdAt,
+              mode: OrderingMode.desc,
+            ),
+          ]))
+        .watch();
+  }
+
+  Future<Expense?> getExpenseById(String expenseId) async {
+    final rows =
+        await (select(expenses)
+              ..where((row) => row.id.equals(expenseId))
+              ..limit(1))
+            .get();
+
+    return rows.isEmpty ? null : rows.first;
+  }
+
+  Future<void> insertExpenseRecord(ExpensesCompanion companion) {
+    return into(expenses).insert(companion);
+  }
+
+  Future<void> updateExpenseRecord(ExpensesCompanion companion) {
+    if (!companion.id.present) {
+      throw ArgumentError('Expense id is required when updating an expense.');
+    }
+
+    return (update(
+      expenses,
+    )..where((row) => row.id.equals(companion.id.value))).write(companion);
+  }
+
+  Future<void> deleteExpenseRecord(String expenseId) {
+    return (delete(expenses)..where((row) => row.id.equals(expenseId))).go();
+  }
+
+  Future<int> getExpenseTotalForCompany(String companyId) async {
+    final rows = await (select(
+      expenses,
+    )..where((row) => row.companyId.equals(companyId))).get();
+
+    return rows.fold<int>(
+      0,
+      (total, expense) => total + expense.totalAmountPaise,
+    );
   }
   // ---------------------------------------------------------------------------
   // PAYMENTS

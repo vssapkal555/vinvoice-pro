@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/company/screens/company_screen.dart';
 import '../../features/dashboard/screens/app_shell.dart';
+import '../../features/expenses/screens/expenses_screen.dart';
 import '../../features/imports/screens/import_excel_screen.dart';
 import '../../features/invoices/screens/create_invoice_screen.dart';
 import '../../features/invoices/screens/edit_invoice_screen.dart';
@@ -61,6 +62,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/tax-rates',
       builder: (context, state) => const TaxRatesScreen(),
+    ),
+    GoRoute(
+      path: '/expenses',
+      builder: (context, state) => const ExpensesScreen(),
     ),
     GoRoute(
       path: '/import-excel',

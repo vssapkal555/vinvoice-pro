@@ -500,6 +500,26 @@ class MorePage extends StatelessWidget {
           const SizedBox(height: 18),
 
           const _MoreSectionHeading(
+            title: 'Business Operations',
+            subtitle: 'Track day-to-day business spending and costs',
+          ),
+
+          const SizedBox(height: 9),
+
+          _MoreGroup(
+            items: [
+              _MoreEntry(
+                icon: Icons.receipt_long_outlined,
+                title: 'Expenses',
+                subtitle: 'Record, review and manage business expenses',
+                onTap: () => context.push('/expenses'),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          const _MoreSectionHeading(
             title: 'Data Tools',
             subtitle: 'Bring historical invoice data into VInvoice',
           ),
