@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
+import '../../expenses/providers/expense_providers.dart';
 import '../../invoices/providers/invoice_list_providers.dart';
 import '../../payments/providers/payment_providers.dart';
 import '../models/report_date_range.dart';
@@ -31,6 +32,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Widget build(BuildContext context) {
     final invoicesAsync = ref.watch(allInvoicesProvider);
     final paymentsAsync = ref.watch(allPaymentsProvider);
+    final expensesAsync = ref.watch(expensesProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -42,6 +44,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             onRetry: () {
               ref.invalidate(allInvoicesProvider);
               ref.invalidate(allPaymentsProvider);
+              ref.invalidate(expensesProvider);
             },
           ),
           data: (invoices) {
@@ -55,7 +58,18 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 },
               ),
               data: (payments) {
-                return _buildReport(context, invoices, payments);
+                return expensesAsync.when(
+                  loading: () => const _ReportLoading(),
+                  error: (error, stack) => _ReportError(
+                    message: error.toString(),
+                    onRetry: () {
+                      ref.invalidate(expensesProvider);
+                    },
+                  ),
+                  data: (expenses) {
+                    return _buildReport(context, invoices, payments, expenses);
+                  },
+                );
               },
             );
           },
@@ -68,6 +82,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     BuildContext context,
     List<Invoice> invoices,
     List<Payment> payments,
+    List<Expense> expenses,
   ) {
     final invoiceRecords = invoices
         .map(
@@ -95,9 +110,27 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         )
         .toList();
 
+    final expenseRecords = expenses
+        .map(
+          (expense) => ReportExpenseRecord(
+            id: expense.id,
+            expenseDate: expense.expenseDate,
+            category: expense.category,
+            baseAmountPaise: expense.baseAmountPaise,
+            gstAmountPaise: expense.gstAmountPaise,
+            totalAmountPaise: expense.totalAmountPaise,
+          ),
+        )
+        .toList();
     final summary = ReportService.financialSummary(
       invoices: invoiceRecords,
       payments: paymentRecords,
+      range: _range,
+    );
+
+    final profitability = ReportService.profitabilitySummary(
+      invoices: invoiceRecords,
+      expenses: expenseRecords,
       range: _range,
     );
 
@@ -105,10 +138,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       onRefresh: () async {
         ref.invalidate(allInvoicesProvider);
         ref.invalidate(allPaymentsProvider);
+        ref.invalidate(expensesProvider);
 
         await Future.wait([
           ref.read(allInvoicesProvider.future),
           ref.read(allPaymentsProvider.future),
+          ref.read(expensesProvider.future),
         ]);
       },
       child: ListView(
@@ -137,6 +172,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           const SizedBox(height: 10),
 
           _FinancialMetrics(summary: summary),
+
+          const SizedBox(height: 18),
+
+          const _SectionHeading(
+            title: 'Profitability',
+            subtitle: 'Issued revenue compared with business expenses',
+          ),
+
+          const SizedBox(height: 10),
+
+          _ProfitabilityCard(summary: profitability),
 
           const SizedBox(height: 18),
 
@@ -177,6 +223,195 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             invoices: invoices,
             payments: payments,
             range: _range,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfitabilityCard extends StatelessWidget {
+  const _ProfitabilityCard({required this.summary});
+
+  final ProfitabilityReportSummary summary;
+
+  String _money(int paise) {
+    return NumberFormat.currency(
+      locale: 'en_IN',
+      symbol: '\u20B9',
+      decimalDigits: 2,
+    ).format(MoneyUtils.paiseToRupees(paise));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profitPositive = summary.operatingProfitPaise >= 0;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _ProfitMetric(
+                  label: 'Revenue',
+                  value: _money(summary.revenuePaise),
+                  icon: Icons.trending_up_rounded,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ProfitMetric(
+                  label: 'Expenses',
+                  value: _money(summary.expensePaise),
+                  icon: Icons.receipt_long_outlined,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _ProfitMetric(
+                  label: profitPositive ? 'Operating Profit' : 'Operating Loss',
+                  value: _money(summary.operatingProfitPaise),
+                  icon: profitPositive
+                      ? Icons.account_balance_wallet_outlined
+                      : Icons.trending_down_rounded,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ProfitMetric(
+                  label: 'Net Margin',
+                  value: '${summary.netMarginPercentage.toStringAsFixed(1)}%',
+                  icon: Icons.percent_rounded,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Divider(height: 1, color: AppTheme.border),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Expense breakdown',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text(
+                '${summary.expenseCount} '
+                '${summary.expenseCount == 1 ? 'record' : 'records'}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppTheme.secondaryText),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (summary.categoryBreakdown.isEmpty)
+            Text(
+              'No expenses recorded in this period.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.secondaryText),
+            )
+          else
+            ...summary.categoryBreakdown
+                .take(5)
+                .map(
+                  (category) => Padding(
+                    padding: const EdgeInsets.only(bottom: 9),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            category.category,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '${category.count} ×',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.secondaryText),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          _money(category.totalPaise),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          if (summary.expensePaise > 0) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Expense GST included: '
+              '${_money(summary.expenseGstPaise)}',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppTheme.secondaryText),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfitMetric extends StatelessWidget {
+  const _ProfitMetric({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceMuted,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: AppTheme.primary),
+          const SizedBox(height: 9),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.secondaryText),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
         ],
       ),

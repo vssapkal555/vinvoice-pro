@@ -43,6 +43,71 @@ class ReportPaymentRecord {
   final int amountPaise;
 }
 
+class ReportExpenseRecord {
+  const ReportExpenseRecord({
+    required this.id,
+    required this.expenseDate,
+    required this.category,
+    required this.baseAmountPaise,
+    required this.gstAmountPaise,
+    required this.totalAmountPaise,
+  });
+
+  final String id;
+  final DateTime expenseDate;
+  final String category;
+
+  final int baseAmountPaise;
+  final int gstAmountPaise;
+  final int totalAmountPaise;
+}
+
+class ExpenseCategorySummary {
+  const ExpenseCategorySummary({
+    required this.category,
+    required this.totalPaise,
+    required this.count,
+  });
+
+  final String category;
+  final int totalPaise;
+  final int count;
+}
+
+class ProfitabilityReportSummary {
+  const ProfitabilityReportSummary({
+    required this.revenuePaise,
+    required this.expensePaise,
+    required this.expenseBasePaise,
+    required this.expenseGstPaise,
+    required this.operatingProfitPaise,
+    required this.expenseCount,
+    required this.categoryBreakdown,
+  });
+
+  final int revenuePaise;
+
+  final int expensePaise;
+  final int expenseBasePaise;
+  final int expenseGstPaise;
+
+  final int operatingProfitPaise;
+
+  final int expenseCount;
+
+  final List<ExpenseCategorySummary> categoryBreakdown;
+
+  double get netMarginPercentage {
+    if (revenuePaise <= 0) {
+      return 0;
+    }
+
+    return (operatingProfitPaise / revenuePaise) * 100;
+  }
+
+  bool get isProfitable => operatingProfitPaise >= 0;
+}
+
 enum ReportPaymentStatus { paid, partiallyPaid, unpaid }
 
 class FinancialReportSummary {

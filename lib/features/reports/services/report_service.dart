@@ -99,6 +99,80 @@ class ReportService {
     );
   }
 
+  static ProfitabilityReportSummary profitabilitySummary({
+    required List<ReportInvoiceRecord> invoices,
+    required List<ReportExpenseRecord> expenses,
+    required ReportDateRange range,
+  }) {
+    final revenuePaise = invoices
+        .where(
+          (invoice) => invoice.isIssued && range.contains(invoice.invoiceDate),
+        )
+        .fold<int>(0, (total, invoice) => total + invoice.grandTotalPaise);
+
+    final expensesInRange = expenses
+        .where((expense) => range.contains(expense.expenseDate))
+        .toList();
+
+    final expenseBasePaise = expensesInRange.fold<int>(
+      0,
+      (total, expense) => total + expense.baseAmountPaise,
+    );
+
+    final expenseGstPaise = expensesInRange.fold<int>(
+      0,
+      (total, expense) => total + expense.gstAmountPaise,
+    );
+
+    final expensePaise = expensesInRange.fold<int>(
+      0,
+      (total, expense) => total + expense.totalAmountPaise,
+    );
+
+    final categoryTotals = <String, int>{};
+    final categoryCounts = <String, int>{};
+
+    for (final expense in expensesInRange) {
+      final category = expense.category.trim().isEmpty
+          ? 'Other'
+          : expense.category.trim();
+
+      categoryTotals.update(
+        category,
+        (existing) => existing + expense.totalAmountPaise,
+        ifAbsent: () => expense.totalAmountPaise,
+      );
+
+      categoryCounts.update(
+        category,
+        (existing) => existing + 1,
+        ifAbsent: () => 1,
+      );
+    }
+
+    final categoryBreakdown =
+        categoryTotals.entries
+            .map(
+              (entry) => ExpenseCategorySummary(
+                category: entry.key,
+                totalPaise: entry.value,
+                count: categoryCounts[entry.key] ?? 0,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.totalPaise.compareTo(a.totalPaise));
+
+    return ProfitabilityReportSummary(
+      revenuePaise: revenuePaise,
+      expensePaise: expensePaise,
+      expenseBasePaise: expenseBasePaise,
+      expenseGstPaise: expenseGstPaise,
+      operatingProfitPaise: revenuePaise - expensePaise,
+      expenseCount: expensesInRange.length,
+      categoryBreakdown: categoryBreakdown,
+    );
+  }
+
   static ReportPaymentStatus paymentStatus({
     required int invoiceTotalPaise,
     required int paidPaise,

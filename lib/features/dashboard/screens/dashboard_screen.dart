@@ -7,9 +7,13 @@ import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_design_tokens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
+import '../../expenses/providers/expense_providers.dart';
 import '../../invoices/providers/invoice_list_providers.dart';
 import '../../parties/providers/party_providers.dart';
 import '../../payments/providers/payment_providers.dart';
+import '../../reports/models/report_date_range.dart';
+import '../../reports/models/report_models.dart';
+import '../../reports/services/report_service.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -21,6 +25,8 @@ class DashboardScreen extends ConsumerWidget {
     final partiesAsync = ref.watch(partiesProvider);
 
     final paymentsAsync = ref.watch(allPaymentsProvider);
+
+    final expensesAsync = ref.watch(expensesProvider);
 
     final paidByInvoice = ref.watch(paidAmountByInvoiceProvider);
 
@@ -36,11 +42,13 @@ class DashboardScreen extends ConsumerWidget {
           ref.invalidate(allInvoicesProvider);
           ref.invalidate(partiesProvider);
           ref.invalidate(allPaymentsProvider);
+          ref.invalidate(expensesProvider);
 
           await Future.wait([
             ref.read(allInvoicesProvider.future),
             ref.read(partiesProvider.future),
             ref.read(allPaymentsProvider.future),
+            ref.read(expensesProvider.future),
           ]);
         },
         child: ListView(
@@ -114,6 +122,45 @@ class DashboardScreen extends ConsumerWidget {
                     orElse: () => 0,
                   );
 
+                  final expenseRecords = expensesAsync.maybeWhen(
+                    data: (expenses) => expenses
+                        .map(
+                          (expense) => ReportExpenseRecord(
+                            id: expense.id,
+                            expenseDate: expense.expenseDate,
+                            category: expense.category,
+                            baseAmountPaise: expense.baseAmountPaise,
+                            gstAmountPaise: expense.gstAmountPaise,
+                            totalAmountPaise: expense.totalAmountPaise,
+                          ),
+                        )
+                        .toList(),
+                    orElse: () => const <ReportExpenseRecord>[],
+                  );
+
+                  final invoiceRecords = invoices
+                      .map(
+                        (invoice) => ReportInvoiceRecord(
+                          id: invoice.id,
+                          invoiceDate: invoice.invoiceDate,
+                          status: invoice.status,
+                          grandTotalPaise: invoice.grandTotalPaise,
+                          taxableAmountPaise: invoice.taxableAmountPaise,
+                          cgstAmountPaise: invoice.cgstAmountPaise,
+                          sgstAmountPaise: invoice.sgstAmountPaise,
+                          igstAmountPaise: invoice.igstAmountPaise,
+                          partyName: invoice.partyNameSnapshot,
+                        ),
+                      )
+                      .toList();
+
+                  final profitability = ReportService.profitabilitySummary(
+                    invoices: invoiceRecords,
+                    expenses: expenseRecords,
+                    range: ReportDateRange.fromPreset(
+                      ReportDatePreset.thisFinancialYear,
+                    ),
+                  );
                   final collectionRatio = totalInvoicedPaise == 0
                       ? 0.0
                       : collectedPaise / totalInvoicedPaise;
@@ -131,6 +178,22 @@ class DashboardScreen extends ConsumerWidget {
                           MoneyUtils.paiseToRupees(outstandingPaise),
                         ),
                         collectionRatio: collectionRatio,
+                      ),
+
+                      const SizedBox(height: AppSpacing.md),
+
+                      _DashboardProfitabilityCard(
+                        expenses: currency.format(
+                          MoneyUtils.paiseToRupees(profitability.expensePaise),
+                        ),
+                        profit: currency.format(
+                          MoneyUtils.paiseToRupees(
+                            profitability.operatingProfitPaise,
+                          ),
+                        ),
+                        margin:
+                            '${profitability.netMarginPercentage.toStringAsFixed(1)}%',
+                        profitable: profitability.isProfitable,
                       ),
 
                       const SizedBox(height: AppSpacing.md),
@@ -285,6 +348,137 @@ class _DashboardHeader extends StatelessWidget {
 // =================================================================
 // FINANCIAL SUMMARY
 // =================================================================
+
+class _DashboardProfitabilityCard extends StatelessWidget {
+  const _DashboardProfitabilityCard({
+    required this.expenses,
+    required this.profit,
+    required this.margin,
+    required this.profitable,
+  });
+
+  final String expenses;
+  final String profit;
+  final String margin;
+  final bool profitable;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(
+                  Icons.insights_outlined,
+                  color: AppTheme.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'FY Profitability',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Issued revenue less business expenses',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _DashboardProfitMetric(
+                  label: 'Expenses',
+                  value: expenses,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _DashboardProfitMetric(
+                  label: profitable ? 'Operating Profit' : 'Operating Loss',
+                  value: profit,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _DashboardProfitMetric(label: 'Margin', value: margin),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardProfitMetric extends StatelessWidget {
+  const _DashboardProfitMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.secondaryText),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _FinanceSummaryCard extends StatelessWidget {
   final String totalInvoiced;
