@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/database/app_database.dart';
@@ -7,8 +8,9 @@ import '../../../core/utils/money_utils.dart';
 import '../models/report_date_range.dart';
 import '../services/report_excel_export_service.dart';
 import '../services/report_pdf_export_service.dart';
+import '../../company/providers/company_providers.dart';
 
-class InvoiceReportScreen extends StatefulWidget {
+class InvoiceReportScreen extends ConsumerStatefulWidget {
   const InvoiceReportScreen({
     super.key,
     required this.invoices,
@@ -21,10 +23,11 @@ class InvoiceReportScreen extends StatefulWidget {
   final ReportDateRange range;
 
   @override
-  State<InvoiceReportScreen> createState() => _InvoiceReportScreenState();
+  ConsumerState<InvoiceReportScreen> createState() =>
+      _InvoiceReportScreenState();
 }
 
-class _InvoiceReportScreenState extends State<InvoiceReportScreen> {
+class _InvoiceReportScreenState extends ConsumerState<InvoiceReportScreen> {
   String _status = 'All';
   String _paymentStatus = 'All';
   String _search = '';
@@ -208,7 +211,11 @@ class _InvoiceReportScreenState extends State<InvoiceReportScreen> {
       (sum, row) => sum + row.outstandingPaise,
     );
 
+    final reportCompany = await ref.read(primaryCompanyProvider.future);
+
     await ReportPdfExportService.share(
+      companyLogo: reportCompany?.logoImage,
+      companyName: reportCompany?.companyName,
       reportTitle: 'Invoice Report',
       fileName: 'invoice_report',
       landscape: true,
@@ -278,8 +285,9 @@ class _InvoiceReportScreenState extends State<InvoiceReportScreen> {
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('Invoice Report'),
-        backgroundColor: AppTheme.background,
         surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 54,
         actions: [
           IconButton(
             tooltip: 'Export Excel',
@@ -454,10 +462,17 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.primaryDark, AppTheme.primary],
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Color.lerp(
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.secondary,
+              0.58,
+            )!,
+          ],
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -580,12 +595,12 @@ class _InvoiceCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppTheme.primarySoft,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.receipt_long_outlined,
-                  color: AppTheme.primary,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 20,
                 ),
               ),

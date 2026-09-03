@@ -32,7 +32,6 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(title: const Text('Parties')),
       body: partiesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => _PartiesError(
@@ -60,16 +59,16 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
 
           final inactiveCount = parties.length - activeCount;
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(partiesProvider);
-              await ref.read(partiesProvider.future);
-            },
-            child: ListView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-              children: [
-                _PartiesHeader(
+          return Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  MediaQuery.paddingOf(context).top + 12,
+                  16,
+                  10,
+                ),
+                child: _PartiesHeader(
                   total: parties.length,
                   active: activeCount,
                   inactive: inactiveCount,
@@ -77,133 +76,145 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                     _openPartyForm(context);
                   },
                 ),
-
-                const SizedBox(height: 16),
-
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search party, GSTIN, PAN, phone or city',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    suffixIcon: _query.isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: 'Clear search',
-                            onPressed: () {
-                              _searchController.clear();
-
-                              setState(() {
-                                _query = '';
-                              });
-                            },
-                            icon: const Icon(Icons.close_rounded),
-                          ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _query = value;
-                    });
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(partiesProvider);
+                    await ref.read(partiesProvider.future);
                   },
-                ),
+                  child: ListView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+                    children: [
+                      TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search party, GSTIN, PAN, phone or city',
+                          prefixIcon: const Icon(Icons.search_rounded),
+                          suffixIcon: _query.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Clear search',
+                                  onPressed: () {
+                                    _searchController.clear();
 
-                const SizedBox(height: 18),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _query.trim().isEmpty
-                            ? 'All Parties'
-                            : 'Search Results',
-                        style: const TextStyle(
-                          color: AppTheme.darkText,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                                    setState(() {
+                                      _query = '';
+                                    });
+                                  },
+                                  icon: const Icon(Icons.close_rounded),
+                                ),
                         ),
-                      ),
-                    ),
-                    Text(
-                      '${filtered.length} ${filtered.length == 1 ? 'party' : 'parties'}',
-                      style: const TextStyle(
-                        color: AppTheme.secondaryText,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 10),
-
-                if (parties.isEmpty)
-                  _EmptyParties(
-                    onAdd: () {
-                      _openPartyForm(context);
-                    },
-                  )
-                else if (filtered.isEmpty)
-                  const _NoSearchResults()
-                else
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final grid = constraints.maxWidth >= 760;
-
-                      if (!grid) {
-                        return Column(
-                          children: [
-                            for (
-                              var index = 0;
-                              index < filtered.length;
-                              index++
-                            ) ...[
-                              _PartyCard(
-                                party: filtered[index],
-                                onTap: () {
-                                  _openPartyForm(
-                                    context,
-                                    party: filtered[index],
-                                  );
-                                },
-                                onActiveChanged: (value) {
-                                  _setPartyActive(filtered[index], value);
-                                },
-                              ),
-                              if (index < filtered.length - 1)
-                                const SizedBox(height: 10),
-                            ],
-                          ],
-                        );
-                      }
-
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filtered.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: 2.15,
-                            ),
-                        itemBuilder: (context, index) {
-                          final party = filtered[index];
-
-                          return _PartyCard(
-                            party: party,
-                            onTap: () {
-                              _openPartyForm(context, party: party);
-                            },
-                            onActiveChanged: (value) {
-                              _setPartyActive(party, value);
-                            },
-                          );
+                        onChanged: (value) {
+                          setState(() {
+                            _query = value;
+                          });
                         },
-                      );
-                    },
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _query.trim().isEmpty
+                                  ? 'All Parties'
+                                  : 'Search Results',
+                              style: const TextStyle(
+                                color: AppTheme.darkText,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${filtered.length} ${filtered.length == 1 ? 'party' : 'parties'}',
+                            style: const TextStyle(
+                              color: AppTheme.secondaryText,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      if (parties.isEmpty)
+                        _EmptyParties(
+                          onAdd: () {
+                            _openPartyForm(context);
+                          },
+                        )
+                      else if (filtered.isEmpty)
+                        const _NoSearchResults()
+                      else
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final grid = constraints.maxWidth >= 760;
+
+                            if (!grid) {
+                              return Column(
+                                children: [
+                                  for (
+                                    var index = 0;
+                                    index < filtered.length;
+                                    index++
+                                  ) ...[
+                                    _PartyCard(
+                                      party: filtered[index],
+                                      onTap: () {
+                                        _openPartyForm(
+                                          context,
+                                          party: filtered[index],
+                                        );
+                                      },
+                                      onActiveChanged: (value) {
+                                        _setPartyActive(filtered[index], value);
+                                      },
+                                    ),
+                                    if (index < filtered.length - 1)
+                                      const SizedBox(height: 10),
+                                  ],
+                                ],
+                              );
+                            }
+
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: filtered.length,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                                    childAspectRatio: 2.15,
+                                  ),
+                              itemBuilder: (context, index) {
+                                final party = filtered[index];
+
+                                return _PartyCard(
+                                  party: party,
+                                  onTap: () {
+                                    _openPartyForm(context, party: party);
+                                  },
+                                  onActiveChanged: (value) {
+                                    _setPartyActive(party, value);
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
+                    ],
                   ),
-              ],
-            ),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -256,7 +267,6 @@ class _PartiesHeader extends StatelessWidget {
     required this.inactive,
     required this.onAdd,
   });
-
   final int total;
   final int active;
   final int inactive;
@@ -264,44 +274,45 @@ class _PartiesHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(15, 13, 15, 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryDark, AppTheme.primary],
+          colors: [
+            scheme.primary,
+            Color.lerp(scheme.primary, scheme.secondary, 0.58)!,
+          ],
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.15),
-            blurRadius: 22,
-            offset: const Offset(0, 9),
+            color: scheme.primary.withValues(alpha: 0.13),
+            blurRadius: 17,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.13),
-                  borderRadius: BorderRadius.circular(14),
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.business_outlined,
                   color: Colors.white,
-                  size: 22,
+                  size: 20,
                 ),
               ),
-
-              const SizedBox(width: 12),
-
+              const SizedBox(width: 10),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,43 +321,46 @@ class _PartiesHeader extends StatelessWidget {
                       'Customer Directory',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    SizedBox(height: 2),
                     Text(
                       'Manage parties used in your invoices',
-                      style: TextStyle(color: Colors.white70, fontSize: 11),
+                      style: TextStyle(color: Colors.white70, fontSize: 9.5),
                     ),
                   ],
                 ),
               ),
-
+              const SizedBox(width: 8),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: AppTheme.primaryDark,
+                  foregroundColor: scheme.primary,
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(11),
+                  ),
                 ),
                 onPressed: onAdd,
-                icon: const Icon(Icons.add_rounded, size: 18),
+                icon: const Icon(Icons.add_rounded, size: 16),
                 label: const Text('New'),
               ),
             ],
           ),
-
-          const SizedBox(height: 20),
-
+          const SizedBox(height: 11),
           Row(
             children: [
               Expanded(
                 child: _PartyMetric(label: 'Total', value: '$total'),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               Expanded(
                 child: _PartyMetric(label: 'Active', value: '$active'),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               Expanded(
                 child: _PartyMetric(label: 'Inactive', value: '$inactive'),
               ),
@@ -437,7 +451,7 @@ class _PartyCard extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: party.isActive
-                      ? AppTheme.primarySoft
+                      ? Theme.of(context).colorScheme.primaryContainer
                       : AppTheme.surfaceMuted,
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -447,7 +461,7 @@ class _PartyCard extends StatelessWidget {
                       : party.partyName[0].toUpperCase(),
                   style: TextStyle(
                     color: party.isActive
-                        ? AppTheme.primary
+                        ? Theme.of(context).colorScheme.primary
                         : AppTheme.secondaryText,
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -801,12 +815,12 @@ class _PartyFormSheetState extends ConsumerState<_PartyFormSheet> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: AppTheme.primarySoft,
+                          color: Theme.of(context).colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(13),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.business_outlined,
-                          color: AppTheme.primary,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
 
@@ -1096,12 +1110,12 @@ class _EmptyParties extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppTheme.primarySoft,
+              color: Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.business_outlined,
-              color: AppTheme.primary,
+              color: Theme.of(context).colorScheme.primary,
               size: 27,
             ),
           ),

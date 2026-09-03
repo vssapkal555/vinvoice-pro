@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
+import '../../invoices/providers/invoice_list_providers.dart';
 import '../data/payment_calculator.dart';
 import '../models/payment_models.dart';
 
@@ -35,10 +36,23 @@ final invoicePaymentSummaryProvider =
       );
     });
 
-final allPaymentsProvider = StreamProvider<List<Payment>>((ref) {
+final allPaymentsProvider = StreamProvider<List<Payment>>((ref) async* {
   final db = ref.watch(appDatabaseProvider);
 
-  return db.watchAllPayments();
+  final invoices = await ref.watch(allInvoicesProvider.future);
+
+  if (invoices.isEmpty) {
+    yield const <Payment>[];
+    return;
+  }
+
+  final allowedInvoiceIds = invoices.map((invoice) => invoice.id).toSet();
+
+  await for (final payments in db.watchAllPayments()) {
+    yield payments
+        .where((payment) => allowedInvoiceIds.contains(payment.invoiceId))
+        .toList();
+  }
 });
 
 final paidAmountByInvoiceProvider = Provider<Map<String, int>>((ref) {

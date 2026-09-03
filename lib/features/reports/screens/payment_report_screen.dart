@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/database/app_database.dart';
@@ -7,8 +8,9 @@ import '../../../core/utils/money_utils.dart';
 import '../models/report_date_range.dart';
 import '../services/report_excel_export_service.dart';
 import '../services/report_pdf_export_service.dart';
+import '../../company/providers/company_providers.dart';
 
-class PaymentReportScreen extends StatefulWidget {
+class PaymentReportScreen extends ConsumerStatefulWidget {
   const PaymentReportScreen({
     super.key,
     required this.invoices,
@@ -21,10 +23,11 @@ class PaymentReportScreen extends StatefulWidget {
   final ReportDateRange range;
 
   @override
-  State<PaymentReportScreen> createState() => _PaymentReportScreenState();
+  ConsumerState<PaymentReportScreen> createState() =>
+      _PaymentReportScreenState();
 }
 
-class _PaymentReportScreenState extends State<PaymentReportScreen> {
+class _PaymentReportScreenState extends ConsumerState<PaymentReportScreen> {
   String _search = '';
 
   List<_PaymentReportRow> get _rows {
@@ -211,7 +214,11 @@ class _PaymentReportScreenState extends State<PaymentReportScreen> {
       (sum, row) => sum + row.payment.amountPaise,
     );
 
+    final reportCompany = await ref.read(primaryCompanyProvider.future);
+
     await ReportPdfExportService.share(
+      companyLogo: reportCompany?.logoImage,
+      companyName: reportCompany?.companyName,
       reportTitle: 'Payment Report',
       fileName: 'payment_report',
       landscape: true,
@@ -262,8 +269,9 @@ class _PaymentReportScreenState extends State<PaymentReportScreen> {
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('Payment Report'),
-        backgroundColor: AppTheme.background,
         surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 54,
         actions: [
           IconButton(
             tooltip: 'Export Excel',
@@ -359,12 +367,19 @@ class _PaymentHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(19),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.primaryDark, AppTheme.primary],
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Color.lerp(
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.secondary,
+              0.58,
+            )!,
+          ],
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

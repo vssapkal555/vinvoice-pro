@@ -1,10 +1,13 @@
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/company/screens/company_screen.dart';
 import '../../features/dashboard/screens/app_shell.dart';
+import '../../features/onboarding/screens/onboarding_gate.dart';
 import '../../features/expenses/screens/expenses_screen.dart';
 import '../../features/imports/screens/import_excel_screen.dart';
+import '../../features/help/screens/help_screen.dart';
 import '../../features/invoices/screens/create_invoice_screen.dart';
 import '../../features/invoices/screens/edit_invoice_screen.dart';
 import '../../features/invoices/screens/invoice_detail_screen.dart';
@@ -16,11 +19,38 @@ import '../../features/parties/screens/parties_screen.dart';
 import '../../features/pdf/screens/invoice_pdf_preview_screen.dart';
 import '../../features/payments/screens/record_payment_screen.dart';
 
+bool _hasActiveSupabaseSession() {
+  try {
+    return Supabase.instance.client.auth.currentSession != null;
+  } catch (_) {
+    // Supabase may intentionally be unavailable in widget tests
+    // or in a misconfigured startup. Fail closed as signed out.
+    return false;
+  }
+}
+
 final GoRouter appRouter = GoRouter(
   initialLocation: '/login',
+  redirect: (context, state) {
+    final signedIn = _hasActiveSupabaseSession();
+    final onLogin = state.matchedLocation == '/login';
+
+    if (!signedIn && !onLogin) {
+      return '/login';
+    }
+
+    if (signedIn && onLogin) {
+      return '/app';
+    }
+
+    return null;
+  },
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-    GoRoute(path: '/app', builder: (context, state) => const AppShell()),
+    GoRoute(
+      path: '/app',
+      builder: (context, state) => const OnboardingGate(child: AppShell()),
+    ),
     GoRoute(
       path: '/invoices/new',
       builder: (context, state) => const CreateInvoiceScreen(),
@@ -45,9 +75,14 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) =>
           InvoiceDetailScreen(invoiceId: state.pathParameters['id']!),
     ),
+    GoRoute(path: '/help', builder: (context, state) => const HelpScreen()),
     GoRoute(
       path: '/company',
       builder: (context, state) => const CompanyScreen(),
+    ),
+    GoRoute(
+      path: '/company/new',
+      builder: (context, state) => const CompanyScreen(createNew: true),
     ),
     GoRoute(
       path: '/parties',

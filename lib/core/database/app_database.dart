@@ -33,6 +33,26 @@ class Companies extends Table {
 
   TextColumn get logoPath => text().nullable()();
 
+  /// Durable company logo bytes. Do not rely on Android source file paths.
+  BlobColumn get logoImage => blob().nullable()();
+
+  // Invoice numbering: standard / custom.
+  TextColumn get invoiceNumberMode =>
+      text().withDefault(const Constant('standard'))();
+  TextColumn get customInvoicePrefix => text().nullable()();
+  TextColumn get customInvoiceSeries => text().nullable()();
+
+  // Optional digital signature used on invoice PDFs.
+  BoolColumn get applySignature =>
+      boolean().withDefault(const Constant(false))();
+
+  BoolColumn get applySignatureToHistorical =>
+      boolean().withDefault(const Constant(false))();
+
+  BlobColumn get signatureImage => blob().nullable()();
+  TextColumn get signatoryName => text().nullable()();
+  TextColumn get signatoryDesignation => text().nullable()();
+
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 
   DateTimeColumn get createdAt => dateTime().clientDefault(DateTime.now)();
@@ -81,6 +101,9 @@ class VendorCodes extends Table {
   TextColumn get companyId =>
       text().references(Companies, #id, onDelete: KeyAction.cascade)();
 
+  TextColumn get partyId =>
+      text().nullable().references(Parties, #id, onDelete: KeyAction.cascade)();
+
   TextColumn get vendorCode => text()();
 
   TextColumn get description => text().nullable()();
@@ -94,7 +117,7 @@ class VendorCodes extends Table {
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {companyId, vendorCode},
+    {companyId, partyId},
   ];
 }
 
@@ -103,6 +126,9 @@ class Sites extends Table {
 
   TextColumn get companyId =>
       text().references(Companies, #id, onDelete: KeyAction.cascade)();
+
+  TextColumn get partyId =>
+      text().nullable().references(Parties, #id, onDelete: KeyAction.cascade)();
 
   TextColumn get siteName => text()();
 
@@ -189,6 +215,17 @@ class Invoices extends Table {
   TextColumn get companyAddress3Snapshot => text().nullable()();
   TextColumn get companyPanSnapshot => text().nullable()();
   TextColumn get companyGstinSnapshot => text().nullable()();
+  BlobColumn get companyLogoSnapshot => blob().nullable()();
+
+  // Historical signature snapshot.
+  BoolColumn get signatureAppliedSnapshot =>
+      boolean().withDefault(const Constant(false))();
+  BlobColumn get signatureImageSnapshot => blob().nullable()();
+  TextColumn get signatoryNameSnapshot => text().nullable()();
+  TextColumn get signatoryDesignationSnapshot => text().nullable()();
+
+  BoolColumn get signatureEligible =>
+      boolean().withDefault(const Constant(false))();
 
   // Historical party snapshot.
   TextColumn get partyNameSnapshot => text()();
@@ -410,7 +447,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -418,6 +455,44 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 8) {
+        await m.addColumn(companies, companies.logoImage);
+        await m.addColumn(invoices, invoices.companyLogoSnapshot);
+      }
+
+      if (from < 7) {
+        await m.addColumn(companies, companies.applySignatureToHistorical);
+        await m.addColumn(invoices, invoices.signatureEligible);
+
+        await customStatement('''
+          UPDATE invoices
+          SET signature_eligible = 1
+          WHERE signature_applied_snapshot = 1
+             OR signature_image_snapshot IS NOT NULL
+             OR signatory_name_snapshot IS NOT NULL
+             OR signatory_designation_snapshot IS NOT NULL
+        ''');
+      }
+
+      if (from < 6) {
+        await m.addColumn(companies, companies.invoiceNumberMode);
+        await m.addColumn(companies, companies.customInvoicePrefix);
+        await m.addColumn(companies, companies.customInvoiceSeries);
+        await m.addColumn(companies, companies.applySignature);
+        await m.addColumn(companies, companies.signatureImage);
+        await m.addColumn(companies, companies.signatoryName);
+        await m.addColumn(companies, companies.signatoryDesignation);
+
+        await m.addColumn(invoices, invoices.signatureAppliedSnapshot);
+        await m.addColumn(invoices, invoices.signatureImageSnapshot);
+        await m.addColumn(invoices, invoices.signatoryNameSnapshot);
+        await m.addColumn(invoices, invoices.signatoryDesignationSnapshot);
+      }
+
+      if (from < 5) {
+        await m.addColumn(sites, sites.partyId);
+      }
+
       if (from < 2) {
         await m.createTable(payments);
       }
@@ -425,18 +500,42 @@ class AppDatabase extends _$AppDatabase {
       if (from < 3) {
         await m.createTable(expenses);
       }
+
+      if (from < 4) {
+        await m.addColumn(vendorCodes, vendorCodes.partyId);
+
+        // Preserve legacy vendor codes. When a company has exactly one party,
+        // the old vendor code can be mapped safely. Ambiguous legacy mappings
+        // remain null and can be assigned from Vendor Codes settings.
+        await customStatement('''
+          UPDATE vendor_codes
+          SET party_id = (
+            SELECT p.id
+            FROM parties p
+            WHERE p.company_id = vendor_codes.company_id
+            LIMIT 1
+          )
+          WHERE party_id IS NULL
+            AND 1 = (
+              SELECT COUNT(*)
+              FROM parties p2
+              WHERE p2.company_id = vendor_codes.company_id
+            )
+        ''');
+
+        await customStatement('''
+          CREATE UNIQUE INDEX IF NOT EXISTS
+          vendor_codes_company_party_unique
+          ON vendor_codes(company_id, party_id)
+          WHERE party_id IS NOT NULL
+        ''');
+      }
     },
     beforeOpen: (OpeningDetails details) async {
       await customStatement('PRAGMA foreign_keys = ON');
 
       await _seedDefaultUnits();
       await _seedDefaultTaxRates();
-
-      final demoCompanyId = await _seedDemoCompany();
-
-      await _seedDemoParty(demoCompanyId);
-      await _seedDemoVendorCode(demoCompanyId);
-      await _seedDemoSite(demoCompanyId);
     },
   );
 
@@ -489,18 +588,13 @@ class AppDatabase extends _$AppDatabase {
   // DEMO DATA
   // ---------------------------------------------------------------------------
 
-  Future<String> _seedDemoCompany() async {
-    final existingCompanies = await (select(companies)..limit(1)).get();
-
-    if (existingCompanies.isNotEmpty) {
-      return existingCompanies.first.id;
-    }
-
+  Future<Company> _createDemoCompanyForOwner(String ownerUserId) async {
     final companyId = _uuid.v4();
 
     await into(companies).insert(
       CompaniesCompanion.insert(
         id: Value(companyId),
+        ownerUserId: Value(ownerUserId),
         companyName: 'VInvoice Demo Enterprises',
         address1: const Value('Office No. 101, Business Plaza'),
         address2: const Value('Main Road'),
@@ -508,14 +602,17 @@ class AppDatabase extends _$AppDatabase {
         city: const Value('Pune'),
         state: const Value('Maharashtra'),
         pincode: const Value('411001'),
-        pan: const Value('ABCDE1234F'),
-        gstin: const Value('27ABCDE1234F1Z5'),
-        phone: const Value('9876543210'),
-        email: const Value('accounts@vinvoicedemo.in'),
       ),
     );
 
-    return companyId;
+    await _seedDemoParty(companyId);
+    await _seedDemoVendorCode(companyId);
+    await _seedDemoSite(companyId);
+
+    return (select(companies)
+          ..where((row) => row.id.equals(companyId))
+          ..limit(1))
+        .getSingle();
   }
 
   Future<void> _seedDemoParty(String companyId) async {
@@ -613,9 +710,49 @@ class AppDatabase extends _$AppDatabase {
     return select(companies).get();
   }
 
+  Future<List<Company>> getCompaniesForOwner(String ownerUserId) {
+    return (select(companies)
+          ..where(
+            (row) =>
+                row.ownerUserId.equals(ownerUserId) & row.isActive.equals(true),
+          )
+          ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]))
+        .get();
+  }
+
+  Future<Company> insertCompanyRecord(CompaniesCompanion companion) {
+    return into(companies).insertReturning(companion);
+  }
+
   Future<Company?> getPrimaryCompany() async {
     final rows = await (select(companies)..limit(1)).get();
     return rows.isEmpty ? null : rows.first;
+  }
+
+  Future<Company?> getPrimaryCompanyForOwner(String ownerUserId) async {
+    final rows =
+        await (select(companies)
+              ..where((row) => row.ownerUserId.equals(ownerUserId))
+              ..limit(1))
+            .get();
+
+    return rows.isEmpty ? null : rows.first;
+  }
+
+  Future<Company> ensurePrimaryCompanyForOwner({
+    required String ownerUserId,
+  }) async {
+    final existing = await getPrimaryCompanyForOwner(ownerUserId);
+
+    if (existing != null) {
+      await _seedDemoParty(existing.id);
+      await _seedDemoVendorCode(existing.id);
+      await _seedDemoSite(existing.id);
+
+      return existing;
+    }
+
+    return _createDemoCompanyForOwner(ownerUserId);
   }
 
   Future<void> updateCompanyRecord(CompaniesCompanion companion) {
@@ -626,6 +763,64 @@ class AppDatabase extends _$AppDatabase {
     return (update(
       companies,
     )..where((row) => row.id.equals(companion.id.value))).write(companion);
+  }
+
+  Future<void> syncCompanySignatureToInvoices({
+    required String companyId,
+    required bool applySignature,
+    required bool applyToHistorical,
+    required Uint8List? signatureImage,
+    required String? signatoryName,
+    required String? signatoryDesignation,
+  }) async {
+    final hasImage =
+        applySignature && signatureImage != null && signatureImage.isNotEmpty;
+
+    await transaction(() async {
+      await (update(invoices)..where(
+            (row) =>
+                row.companyId.equals(companyId) &
+                row.signatureEligible.equals(true),
+          ))
+          .write(
+            InvoicesCompanion(
+              signatureAppliedSnapshot: Value(hasImage),
+              signatureImageSnapshot: Value(hasImage ? signatureImage : null),
+              signatoryNameSnapshot: Value(
+                hasImage ? _nullableImportText(signatoryName) : null,
+              ),
+              signatoryDesignationSnapshot: Value(
+                hasImage ? _nullableImportText(signatoryDesignation) : null,
+              ),
+              updatedAt: Value(DateTime.now()),
+            ),
+          );
+
+      final historicalHasImage = hasImage && applyToHistorical;
+
+      await (update(invoices)..where(
+            (row) =>
+                row.companyId.equals(companyId) &
+                row.signatureEligible.equals(false),
+          ))
+          .write(
+            InvoicesCompanion(
+              signatureAppliedSnapshot: Value(historicalHasImage),
+              signatureImageSnapshot: Value(
+                historicalHasImage ? signatureImage : null,
+              ),
+              signatoryNameSnapshot: Value(
+                historicalHasImage ? _nullableImportText(signatoryName) : null,
+              ),
+              signatoryDesignationSnapshot: Value(
+                historicalHasImage
+                    ? _nullableImportText(signatoryDesignation)
+                    : null,
+              ),
+              updatedAt: Value(DateTime.now()),
+            ),
+          );
+    });
   }
 
   Future<List<Party>> getPartiesForCompany(String companyId) {
@@ -654,6 +849,24 @@ class AppDatabase extends _$AppDatabase {
     return (update(
       parties,
     )..where((row) => row.id.equals(companion.id.value))).write(companion);
+  }
+
+  Future<VendorCode?> getVendorCodeForParty({
+    required String companyId,
+    required String partyId,
+  }) async {
+    final rows =
+        await (select(vendorCodes)
+              ..where(
+                (row) =>
+                    row.companyId.equals(companyId) &
+                    row.partyId.equals(partyId) &
+                    row.isActive.equals(true),
+              )
+              ..limit(1))
+            .get();
+
+    return rows.isEmpty ? null : rows.first;
   }
 
   Future<List<VendorCode>> getVendorCodesForCompany(String companyId) {
@@ -808,6 +1021,21 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  Future<List<Site>> getActiveSitesForParty({
+    required String companyId,
+    required String partyId,
+  }) {
+    return (select(sites)
+          ..where(
+            (row) =>
+                row.companyId.equals(companyId) &
+                row.partyId.equals(partyId) &
+                row.isActive.equals(true),
+          )
+          ..orderBy([(row) => OrderingTerm.asc(row.siteName)]))
+        .get();
+  }
+
   Future<List<Unit>> getActiveUnitsForCompany(String companyId) {
     return (select(units)
           ..where(
@@ -917,6 +1145,15 @@ class AppDatabase extends _$AppDatabase {
     required String invoiceId,
     required String status,
   }) async {
+    if (status.toLowerCase() == 'cancelled') {
+      final paymentRows = await getPaymentsForInvoice(invoiceId);
+      if (paymentRows.isNotEmpty) {
+        throw StateError(
+          'An invoice with payment activity cannot be cancelled.',
+        );
+      }
+    }
+
     await (update(invoices)..where((row) => row.id.equals(invoiceId))).write(
       InvoicesCompanion(
         status: Value(status),

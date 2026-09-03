@@ -137,13 +137,33 @@ class _VendorCodesScreenState extends ConsumerState<VendorCodesScreen> {
 
     if (company == null || !context.mounted) return;
 
+    final parties = await ref
+        .read(appDatabaseProvider)
+        .getActivePartiesForCompany(company.id);
+
+    if (!context.mounted) return;
+
+    if (parties.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Create a customer / party before adding a vendor code.',
+          ),
+        ),
+      );
+      return;
+    }
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: AppTheme.surface,
-      builder: (_) =>
-          _VendorCodeForm(companyId: company.id, vendorCode: vendorCode),
+      builder: (_) => _VendorCodeForm(
+        companyId: company.id,
+        parties: parties,
+        vendorCode: vendorCode,
+      ),
     );
 
     ref.invalidate(vendorCodesProvider);
@@ -151,9 +171,14 @@ class _VendorCodesScreenState extends ConsumerState<VendorCodesScreen> {
 }
 
 class _VendorCodeForm extends ConsumerStatefulWidget {
-  const _VendorCodeForm({required this.companyId, this.vendorCode});
+  const _VendorCodeForm({
+    required this.companyId,
+    required this.parties,
+    this.vendorCode,
+  });
 
   final String companyId;
+  final List<Party> parties;
   final VendorCode? vendorCode;
 
   @override
@@ -166,6 +191,7 @@ class _VendorCodeFormState extends ConsumerState<_VendorCodeForm> {
   late final TextEditingController _code;
   late final TextEditingController _description;
 
+  Party? _party;
   bool _saving = false;
 
   @override
@@ -177,6 +203,16 @@ class _VendorCodeFormState extends ConsumerState<_VendorCodeForm> {
     _description = TextEditingController(
       text: widget.vendorCode?.description ?? '',
     );
+
+    final existingPartyId = widget.vendorCode?.partyId;
+    if (existingPartyId != null) {
+      for (final party in widget.parties) {
+        if (party.id == existingPartyId) {
+          _party = party;
+          break;
+        }
+      }
+    }
   }
 
   @override
@@ -195,10 +231,26 @@ class _VendorCodeFormState extends ConsumerState<_VendorCodeForm> {
       final db = ref.read(appDatabaseProvider);
       final code = _code.text.trim().toUpperCase();
 
+      if (_party == null) {
+        throw StateError('Please select a customer / party.');
+      }
+
+      final existing = await db.getVendorCodeForParty(
+        companyId: widget.companyId,
+        partyId: _party!.id,
+      );
+
+      if (existing != null && existing.id != widget.vendorCode?.id) {
+        throw StateError(
+          'This company and customer already has vendor code ${existing.vendorCode}.',
+        );
+      }
+
       if (widget.vendorCode == null) {
         await db.insertVendorCodeRecord(
           VendorCodesCompanion.insert(
             companyId: widget.companyId,
+            partyId: Value(_party!.id),
             vendorCode: code,
             description: Value(_description.text.trim()),
           ),
@@ -207,6 +259,7 @@ class _VendorCodeFormState extends ConsumerState<_VendorCodeForm> {
         await db.updateVendorCodeRecord(
           VendorCodesCompanion(
             id: Value(widget.vendorCode!.id),
+            partyId: Value(_party!.id),
             vendorCode: Value(code),
             description: Value(_description.text.trim()),
           ),
@@ -234,6 +287,29 @@ class _VendorCodeFormState extends ConsumerState<_VendorCodeForm> {
         key: _formKey,
         child: Column(
           children: [
+            DropdownButtonFormField<Party>(
+              initialValue: _party,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Customer / Party',
+                prefixIcon: Icon(Icons.business_outlined),
+              ),
+              items: widget.parties
+                  .map(
+                    (party) => DropdownMenuItem<Party>(
+                      value: party,
+                      child: Text(
+                        party.partyName,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              validator: (value) =>
+                  value == null ? 'Customer is required' : null,
+              onChanged: (value) => setState(() => _party = value),
+            ),
+            const SizedBox(height: 12),
             TextFormField(
               controller: _code,
               textCapitalization: TextCapitalization.characters,

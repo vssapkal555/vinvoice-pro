@@ -108,6 +108,7 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
     _igstRate = widget.data.taxRate('IGST', 18);
 
     _poNumberController = TextEditingController();
+    _poNumberController.addListener(_onPoChanged);
 
     _serviceEntryController = TextEditingController();
 
@@ -131,8 +132,26 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
     return widget.data.units.first;
   }
 
+  void _onPoChanged() {
+    if (mounted) setState(() {});
+  }
+
+  List<Site> get _availableSites {
+    final party = _party;
+    if (party == null) return const [];
+    return widget.data.sites
+        .where(
+          (site) =>
+              site.companyId == widget.data.company.id &&
+              site.partyId == party.id &&
+              site.isActive,
+        )
+        .toList();
+  }
+
   @override
   void dispose() {
+    _poNumberController.removeListener(_onPoChanged);
     _poNumberController.dispose();
     _serviceEntryController.dispose();
 
@@ -262,12 +281,38 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
       return;
     }
 
+    final mappedVendors = widget.data.vendorCodes.where(
+      (vendor) =>
+          vendor.partyId == selected.id &&
+          vendor.companyId == widget.data.company.id &&
+          vendor.isActive,
+    );
+
+    final mappedVendor = mappedVendors.isEmpty ? null : mappedVendors.first;
+
+    final sites = widget.data.sites
+        .where(
+          (site) =>
+              site.companyId == widget.data.company.id &&
+              site.partyId == selected.id &&
+              site.isActive,
+        )
+        .toList();
+
     setState(() {
       _party = selected;
+      _vendorCode = mappedVendor;
+      _site = sites.length == 1 ? sites.first : null;
     });
+
+    if (mappedVendor == null && mounted) {
+      _showMessage(
+        'No vendor code is mapped to ${selected.partyName}. Configure it in Vendor Codes.',
+      );
+    }
   }
 
-  Future<void> _saveDraft() async {
+  Future<void> _saveInvoice({required bool issue}) async {
     if (_saving) {
       return;
     }
@@ -278,6 +323,23 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
 
     if (_party == null) {
       _showMessage('Please select a party.');
+      return;
+    }
+
+    if (_vendorCode == null) {
+      _showMessage(
+        'This customer has no vendor code for the selected company. Configure the vendor code first.',
+      );
+      return;
+    }
+
+    if (issue && _poNumberController.text.trim().isEmpty) {
+      _showMessage('PO Number is required to issue an invoice.');
+      return;
+    }
+
+    if (_availableSites.isNotEmpty && _site == null) {
+      _showMessage('Please select a Site / Plant.');
       return;
     }
 
@@ -346,6 +408,23 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
         companyPanSnapshot: Value(company.pan),
 
         companyGstinSnapshot: Value(company.gstin),
+        companyLogoSnapshot: Value(company.logoImage),
+
+        signatureAppliedSnapshot: Value(
+          company.applySignature &&
+              company.signatureImage != null &&
+              company.signatureImage!.isNotEmpty,
+        ),
+        signatureImageSnapshot: Value(
+          company.applySignature ? company.signatureImage : null,
+        ),
+        signatoryNameSnapshot: Value(
+          company.applySignature ? company.signatoryName : null,
+        ),
+        signatoryDesignationSnapshot: Value(
+          company.applySignature ? company.signatoryDesignation : null,
+        ),
+        signatureEligible: const Value(true),
 
         partyNameSnapshot: party.partyName,
 
@@ -400,7 +479,7 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
 
         amountInWords: Value(calculation.amountInWords),
 
-        status: const Value('draft'),
+        status: Value(issue ? 'issued' : 'draft'),
 
         syncStatus: const Value('local'),
       );
@@ -446,9 +525,11 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
         context: context,
         builder: (context) => AlertDialog(
           icon: const Icon(Icons.check_circle_outline, size: 48),
-          title: const Text('Draft Saved'),
+          title: Text(issue ? 'Invoice Issued' : 'Draft Saved'),
           content: Text(
-            'Invoice $_invoiceNumber was saved successfully.',
+            issue
+                ? 'Invoice $_invoiceNumber was issued successfully.'
+                : 'Invoice $_invoiceNumber was saved successfully.',
             textAlign: TextAlign.center,
           ),
           actions: [
@@ -621,43 +702,48 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
                             prefixIcon: Icon(Icons.assignment_outlined),
                           ),
                         ),
-                        DropdownButtonFormField<VendorCode>(
-                          initialValue: _vendorCode,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
+                        TextFormField(
+                          key: ValueKey(_vendorCode?.id ?? 'no-vendor-code'),
+                          initialValue: _vendorCode?.vendorCode ?? '',
+                          readOnly: true,
+                          decoration: InputDecoration(
                             labelText: 'Vendor Code',
-                            prefixIcon: Icon(Icons.numbers_rounded),
+                            prefixIcon: const Icon(Icons.numbers_rounded),
+                            helperText: _party == null
+                                ? 'Select customer first'
+                                : _vendorCode == null
+                                ? 'No vendor code mapped to this customer'
+                                : 'Automatically selected from customer mapping',
                           ),
-                          items: widget.data.vendorCodes.map((vendor) {
-                            return DropdownMenuItem(
-                              value: vendor,
-                              child: Text(vendor.vendorCode),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _vendorCode = value;
-                            });
-                          },
                         ),
                         DropdownButtonFormField<Site>(
-                          initialValue: _site,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Site / Plant',
-                            prefixIcon: Icon(Icons.location_on_outlined),
+                          key: ValueKey(
+                            '${_party?.id ?? 'no-party'}-${_site?.id ?? 'no-site'}',
                           ),
-                          items: widget.data.sites.map((site) {
+                          initialValue: _availableSites.contains(_site)
+                              ? _site
+                              : null,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: 'Site / Plant',
+                            prefixIcon: const Icon(Icons.location_on_outlined),
+                            helperText: _party == null
+                                ? 'Select customer first'
+                                : _availableSites.isEmpty
+                                ? 'No site / plant configured for this customer'
+                                : _availableSites.length == 1
+                                ? 'Automatically selected'
+                                : 'Select one of ${_availableSites.length} available sites',
+                          ),
+                          items: _availableSites.map((site) {
                             return DropdownMenuItem(
                               value: site,
                               child: Text(site.siteName),
                             );
                           }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _site = value;
-                            });
-                          },
+                          onChanged: _party == null || _availableSites.isEmpty
+                              ? null
+                              : (value) => setState(() => _site = value),
                         ),
                       ];
 
@@ -924,19 +1010,30 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
 
               Expanded(
                 flex: 2,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : _saveDraft,
-                  icon: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.save_outlined),
-                  label: Text(_saving ? 'Saving...' : 'Save Draft'),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _saving
+                            ? null
+                            : () => _saveInvoice(issue: false),
+                        icon: const Icon(Icons.save_outlined),
+                        label: const Text('Save Draft'),
+                      ),
+                    ),
+                    if (_poNumberController.text.trim().isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _saving
+                              ? null
+                              : () => _saveInvoice(issue: true),
+                          icon: const Icon(Icons.check_circle_outline),
+                          label: Text(_saving ? 'Saving...' : 'Issue Invoice'),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -1079,14 +1176,14 @@ class _InvoiceItemCardState extends State<_InvoiceItemCard> {
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: AppTheme.primarySoft,
+                        color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(11),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         widget.serialNo.toString().padLeft(2, '0'),
-                        style: const TextStyle(
-                          color: AppTheme.primary,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                         ),
@@ -1292,7 +1389,9 @@ class _InvoiceItemCardState extends State<_InvoiceItemCard> {
                             vertical: 9,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.primarySoft,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Column(
@@ -1445,7 +1544,7 @@ class _PartyPickerSheetState extends State<_PartyPickerSheet> {
 
                       return Material(
                         color: selected
-                            ? AppTheme.primarySoft
+                            ? Theme.of(context).colorScheme.primaryContainer
                             : AppTheme.surface,
                         borderRadius: BorderRadius.circular(16),
                         child: InkWell(
@@ -1461,7 +1560,9 @@ class _PartyPickerSheetState extends State<_PartyPickerSheet> {
                                   width: 42,
                                   height: 42,
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primarySoft,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primaryContainer,
                                     borderRadius: BorderRadius.circular(13),
                                   ),
                                   alignment: Alignment.center,
@@ -1469,8 +1570,10 @@ class _PartyPickerSheetState extends State<_PartyPickerSheet> {
                                     party.partyName.isEmpty
                                         ? '?'
                                         : party.partyName[0].toUpperCase(),
-                                    style: const TextStyle(
-                                      color: AppTheme.primary,
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
@@ -1506,9 +1609,11 @@ class _PartyPickerSheetState extends State<_PartyPickerSheet> {
                                 ),
 
                                 if (selected)
-                                  const Icon(
+                                  Icon(
                                     Icons.check_circle_rounded,
-                                    color: AppTheme.primary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   )
                                 else
                                   const Icon(
@@ -1551,15 +1656,20 @@ class _InvoiceHero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryDark, AppTheme.primary],
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.secondary,
+          ],
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.18),
+            color: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.18),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -1701,10 +1811,14 @@ class _ModernSection extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppTheme.primarySoft,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: AppTheme.primary, size: 19),
+                child: Icon(
+                  icon,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 19,
+                ),
               ),
 
               const SizedBox(width: 11),
@@ -1768,7 +1882,9 @@ class _PartySelector extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: selected
-                  ? AppTheme.primary.withValues(alpha: 0.16)
+                  ? Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.16)
                   : AppTheme.border,
             ),
           ),

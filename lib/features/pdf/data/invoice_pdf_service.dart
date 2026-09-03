@@ -1,7 +1,8 @@
-import 'dart:typed_data';
+import 'package:flutter/services.dart';
 
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/utils/money_utils.dart';
@@ -9,16 +10,30 @@ import '../../../core/utils/money_utils.dart';
 class InvoicePdfService {
   const InvoicePdfService._();
 
+  static const PdfColor _navy = PdfColor.fromInt(0xFF101828);
+  static const PdfColor _blue = PdfColor.fromInt(0xFF2563EB);
+  static const PdfColor _blueSoft = PdfColor.fromInt(0xFFEFF6FF);
+  static const PdfColor _surfaceSoft = PdfColor.fromInt(0xFFF8FAFC);
+  static const PdfColor _border = PdfColor.fromInt(0xFFD8E0EA);
+  static const PdfColor _muted = PdfColor.fromInt(0xFF64748B);
+
   static Future<Uint8List> buildPdf({
     required Invoice invoice,
     required List<InvoiceItem> items,
     PdfPageFormat pageFormat = PdfPageFormat.a4,
+    bool includeCompanyHeader = true,
   }) async {
+    final regularFont = await PdfGoogleFonts.notoSansRegular();
+    final boldFont = await PdfGoogleFonts.notoSansBold();
+    final appLogo = (await rootBundle.load(
+      'assets/branding/vinvoice_pro_logo.png',
+    )).buffer.asUint8List();
     final document = pw.Document(
       title: invoice.invoiceNumber,
       author: invoice.companyNameSnapshot,
       subject: 'Tax Invoice',
       creator: 'VInvoice Pro',
+      theme: pw.ThemeData.withFont(base: regularFont, bold: boldFont),
     );
 
     document.addPage(
@@ -30,8 +45,13 @@ class InvoicePdfService {
             return _buildStatusWatermark(invoice);
           },
         ),
-        header: (context) => _buildHeader(invoice),
-        footer: (context) => _buildFooter(context),
+        header: (context) {
+          if (includeCompanyHeader) {
+            return _buildHeader(invoice);
+          }
+          return _buildPreprintedLetterheadSpace(context);
+        },
+        footer: (context) => _buildFooter(context, invoice, appLogo),
         build: (context) => [
           pw.SizedBox(height: 8),
           _invoiceTitle(),
@@ -41,8 +61,6 @@ class InvoicePdfService {
           _itemsTable(items),
           pw.SizedBox(height: 16),
           _taxSummary(invoice),
-          pw.SizedBox(height: 16),
-          _amountInWords(invoice),
           pw.SizedBox(height: 20),
           _declaration(invoice),
         ],
@@ -50,6 +68,16 @@ class InvoicePdfService {
     );
 
     return document.save();
+  }
+
+  /// Reserves about 35 mm for a client's preprinted letterhead.
+  /// The extra blank area is applied on page 1 only.
+  static pw.Widget _buildPreprintedLetterheadSpace(pw.Context context) {
+    if (context.pageNumber != 1) {
+      return pw.SizedBox();
+    }
+
+    return pw.SizedBox(height: 100);
   }
 
   static pw.Widget _buildHeader(Invoice invoice) {
@@ -60,13 +88,38 @@ class InvoicePdfService {
     ]);
 
     return pw.Container(
-      padding: const pw.EdgeInsets.only(bottom: 10),
-      decoration: const pw.BoxDecoration(
-        border: pw.Border(bottom: pw.BorderSide(width: 1.2)),
+      padding: const pw.EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: pw.BoxDecoration(
+        color: _surfaceSoft,
+        border: pw.Border.all(color: _border, width: 0.7),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
       ),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
+          if (invoice.companyLogoSnapshot != null &&
+              invoice.companyLogoSnapshot!.isNotEmpty) ...[
+            pw.Container(
+              width: 72,
+              height: 64,
+              padding: const pw.EdgeInsets.all(4),
+              alignment: pw.Alignment.center,
+              child: pw.Image(
+                pw.MemoryImage(invoice.companyLogoSnapshot!),
+                fit: pw.BoxFit.contain,
+              ),
+            ),
+            pw.SizedBox(width: 10),
+          ],
+          pw.Container(
+            width: 5,
+            height: 64,
+            decoration: const pw.BoxDecoration(
+              color: _blue,
+              borderRadius: pw.BorderRadius.all(pw.Radius.circular(3)),
+            ),
+          ),
+          pw.SizedBox(width: 11),
           pw.Expanded(
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -74,7 +127,8 @@ class InvoicePdfService {
                 pw.Text(
                   invoice.companyNameSnapshot,
                   style: pw.TextStyle(
-                    fontSize: 18,
+                    color: _navy,
+                    fontSize: 19,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -82,22 +136,38 @@ class InvoicePdfService {
                   pw.SizedBox(height: 4),
                   pw.Text(
                     companyAddress,
-                    style: const pw.TextStyle(fontSize: 9),
-                  ),
-                ],
-                if (_hasValue(invoice.companyGstinSnapshot))
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.only(top: 3),
-                    child: pw.Text(
-                      'GSTIN: ${invoice.companyGstinSnapshot}',
-                      style: const pw.TextStyle(fontSize: 9),
+                    style: const pw.TextStyle(
+                      color: _muted,
+                      fontSize: 8.5,
+                      height: 1.35,
                     ),
                   ),
-                if (_hasValue(invoice.companyPanSnapshot))
-                  pw.Text(
-                    'PAN: ${invoice.companyPanSnapshot}',
-                    style: const pw.TextStyle(fontSize: 9),
-                  ),
+                ],
+                pw.SizedBox(height: 4),
+                pw.Wrap(
+                  spacing: 12,
+                  runSpacing: 3,
+                  children: [
+                    if (_hasValue(invoice.companyGstinSnapshot))
+                      pw.Text(
+                        'GSTIN: ${invoice.companyGstinSnapshot}',
+                        style: pw.TextStyle(
+                          color: _navy,
+                          fontSize: 8,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                    if (_hasValue(invoice.companyPanSnapshot))
+                      pw.Text(
+                        'PAN: ${invoice.companyPanSnapshot}',
+                        style: pw.TextStyle(
+                          color: _muted,
+                          fontSize: 8,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -107,13 +177,21 @@ class InvoicePdfService {
   }
 
   static pw.Widget _invoiceTitle() {
-    return pw.Center(
-      child: pw.Container(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-        decoration: pw.BoxDecoration(border: pw.Border.all(width: 1)),
-        child: pw.Text(
-          'TAX INVOICE',
-          style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.symmetric(vertical: 8),
+      decoration: const pw.BoxDecoration(
+        color: _blueSoft,
+        borderRadius: pw.BorderRadius.all(pw.Radius.circular(5)),
+      ),
+      child: pw.Text(
+        'TAX INVOICE',
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(
+          color: _navy,
+          fontSize: 14,
+          fontWeight: pw.FontWeight.bold,
+          letterSpacing: 0.8,
         ),
       ),
     );
@@ -121,7 +199,7 @@ class InvoicePdfService {
 
   static pw.Widget _partyAndInvoiceDetails(Invoice invoice) {
     return pw.Table(
-      border: pw.TableBorder.all(width: 0.7),
+      border: pw.TableBorder.all(color: _border, width: 0.7),
       columnWidths: const {
         0: pw.FlexColumnWidth(1.25),
         1: pw.FlexColumnWidth(1),
@@ -162,13 +240,19 @@ class InvoicePdfService {
               padding: const pw.EdgeInsets.only(top: 4),
               child: pw.Text(
                 'GSTIN: ${invoice.partyGstinSnapshot}',
-                style: const pw.TextStyle(fontSize: 8.5),
+                style: pw.TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: pw.FontWeight.bold,
+                ),
               ),
             ),
           if (_hasValue(invoice.partyPanSnapshot))
             pw.Text(
               'PAN: ${invoice.partyPanSnapshot}',
-              style: const pw.TextStyle(fontSize: 8.5),
+              style: pw.TextStyle(
+                fontSize: 8.5,
+                fontWeight: pw.FontWeight.bold,
+              ),
             ),
         ],
       ),
@@ -240,10 +324,14 @@ class InvoicePdfService {
     }
 
     return pw.TableHelper.fromTextArray(
-      border: pw.TableBorder.all(width: 0.6),
-      headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-      headerStyle: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold),
-      cellStyle: const pw.TextStyle(fontSize: 7.5),
+      border: pw.TableBorder.all(color: _border, width: 0.55),
+      headerDecoration: const pw.BoxDecoration(color: _navy),
+      headerStyle: pw.TextStyle(
+        color: PdfColors.white,
+        fontSize: 7.5,
+        fontWeight: pw.FontWeight.bold,
+      ),
+      cellStyle: const pw.TextStyle(color: _navy, fontSize: 7.5),
       cellPadding: const pw.EdgeInsets.all(5),
       columnWidths: const {
         0: pw.FixedColumnWidth(24),
@@ -276,9 +364,7 @@ class InvoicePdfService {
   }
 
   static pw.Widget _taxSummary(Invoice invoice) {
-    final rows = <pw.Widget>[
-      _summaryRow('Basic Amount', _money(invoice.basicAmountPaise)),
-    ];
+    final rows = <pw.Widget>[];
 
     if (invoice.taxType == 'taxable') {
       rows.add(
@@ -327,14 +413,19 @@ class InvoicePdfService {
     );
 
     return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
-        pw.Expanded(child: pw.Container()),
+        pw.Expanded(child: _amountInWords(invoice)),
+        pw.SizedBox(width: 12),
         pw.SizedBox(
           width: 235,
           child: pw.Container(
             padding: const pw.EdgeInsets.all(10),
-            decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.8)),
+            decoration: pw.BoxDecoration(
+              color: _surfaceSoft,
+              border: pw.Border.all(color: _border, width: 0.8),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
+            ),
             child: pw.Column(children: rows),
           ),
         ),
@@ -368,7 +459,11 @@ class InvoicePdfService {
     return pw.Container(
       width: double.infinity,
       padding: const pw.EdgeInsets.all(9),
-      decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.7)),
+      decoration: pw.BoxDecoration(
+        color: _blueSoft,
+        border: pw.Border.all(color: _border, width: 0.7),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
+      ),
       child: pw.RichText(
         text: pw.TextSpan(
           children: [
@@ -390,37 +485,23 @@ class InvoicePdfService {
   }
 
   static pw.Widget _declaration(Invoice invoice) {
-    final taxType = invoice.taxType == 'nonTaxable'
-        ? 'Non-Taxable'
-        : invoice.gstMode == 'igst'
-        ? 'Taxable - IGST'
-        : 'Taxable - CGST + SGST';
+    final showDigitalSignature =
+        invoice.signatureAppliedSnapshot &&
+        invoice.signatureImageSnapshot != null &&
+        invoice.signatureImageSnapshot!.isNotEmpty;
 
     return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.end,
       crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
-        pw.Expanded(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'Tax Type: $taxType',
-                style: const pw.TextStyle(fontSize: 8),
-              ),
-              pw.SizedBox(height: 5),
-              pw.Text(
-                'This is a computer-generated invoice.',
-                style: const pw.TextStyle(
-                  fontSize: 7.5,
-                  color: PdfColors.grey700,
-                ),
-              ),
-            ],
+        pw.Container(
+          width: 235,
+          padding: const pw.EdgeInsets.fromLTRB(12, 10, 12, 9),
+          decoration: pw.BoxDecoration(
+            color: _surfaceSoft,
+            border: pw.Border.all(color: _border, width: 0.7),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
           ),
-        ),
-        pw.SizedBox(width: 30),
-        pw.SizedBox(
-          width: 170,
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
@@ -432,19 +513,51 @@ class InvoicePdfService {
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
-              pw.SizedBox(height: 45),
-              pw.Container(
-                width: double.infinity,
-                decoration: const pw.BoxDecoration(
-                  border: pw.Border(top: pw.BorderSide(width: 0.6)),
+              pw.SizedBox(height: 5),
+              if (showDigitalSignature) ...[
+                pw.Container(
+                  height: 43,
+                  alignment: pw.Alignment.center,
+                  child: pw.Image(
+                    pw.MemoryImage(invoice.signatureImageSnapshot!),
+                    fit: pw.BoxFit.contain,
+                  ),
                 ),
-                padding: const pw.EdgeInsets.only(top: 4),
-                child: pw.Text(
-                  'Authorised Signatory',
-                  textAlign: pw.TextAlign.center,
-                  style: const pw.TextStyle(fontSize: 8),
+                if ((invoice.signatoryNameSnapshot ?? '').trim().isNotEmpty)
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 3),
+                    child: pw.Text(
+                      invoice.signatoryNameSnapshot!.trim(),
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                if ((invoice.signatoryDesignationSnapshot ?? '')
+                    .trim()
+                    .isNotEmpty)
+                  pw.Text(
+                    invoice.signatoryDesignationSnapshot!.trim(),
+                    textAlign: pw.TextAlign.center,
+                    style: pw.TextStyle(fontSize: 7, color: _muted),
+                  ),
+              ] else ...[
+                pw.SizedBox(height: 43),
+                pw.Container(
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.only(top: 4),
+                  decoration: const pw.BoxDecoration(
+                    border: pw.Border(top: pw.BorderSide(width: 0.6)),
+                  ),
+                  child: pw.Text(
+                    'Authorised Signatory',
+                    textAlign: pw.TextAlign.center,
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -452,26 +565,48 @@ class InvoicePdfService {
     );
   }
 
-  static pw.Widget _buildFooter(pw.Context context) {
+  static pw.Widget _buildFooter(
+    pw.Context context,
+    Invoice invoice,
+    Uint8List appLogo,
+  ) {
+    final taxType = invoice.taxType == 'nonTaxable'
+        ? 'Non-Taxable'
+        : invoice.gstMode == 'igst'
+        ? 'Taxable - IGST'
+        : 'Taxable - CGST + SGST';
+
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 12),
       padding: const pw.EdgeInsets.only(top: 6),
       decoration: const pw.BoxDecoration(
-        border: pw.Border(
-          top: pw.BorderSide(width: 0.5, color: PdfColors.grey600),
-        ),
+        border: pw.Border(top: pw.BorderSide(width: 0.5, color: _border)),
       ),
       child: pw.Row(
         children: [
-          pw.Expanded(
-            child: pw.Text(
-              'Generated by VInvoice Pro',
-              style: pw.TextStyle(fontSize: 7, color: PdfColors.grey600),
+          pw.SizedBox(
+            width: 90,
+            height: 14,
+            child: pw.Image(
+              pw.MemoryImage(appLogo),
+              fit: pw.BoxFit.contain,
+              alignment: pw.Alignment.centerLeft,
             ),
           ),
-          pw.Text(
-            'Page ${context.pageNumber} of ${context.pagesCount}',
-            style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600),
+          pw.Expanded(
+            child: pw.Text(
+              'Tax Type: $taxType | This is a computer generated invoice',
+              textAlign: pw.TextAlign.center,
+              style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600),
+            ),
+          ),
+          pw.SizedBox(
+            width: 90,
+            child: pw.Text(
+              'Page ${context.pageNumber} of ${context.pagesCount}',
+              textAlign: pw.TextAlign.right,
+              style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600),
+            ),
           ),
         ],
       ),
@@ -481,7 +616,7 @@ class InvoicePdfService {
   static String _money(int paise) {
     final value = MoneyUtils.paiseToRupees(paise);
 
-    return 'INR ${_formatIndianNumber(value)}';
+    return _formatIndianNumber(value);
   }
 
   static String _formatIndianNumber(double value) {

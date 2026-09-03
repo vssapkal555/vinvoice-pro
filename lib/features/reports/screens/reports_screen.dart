@@ -122,6 +122,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           ),
         )
         .toList();
+
     final summary = ReportService.financialSummary(
       invoices: invoiceRecords,
       payments: paymentRecords,
@@ -134,98 +135,87 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       range: _range,
     );
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(allInvoicesProvider);
-        ref.invalidate(allPaymentsProvider);
-        ref.invalidate(expensesProvider);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: _ReportHero(summary: summary, range: _range),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(allInvoicesProvider);
+              ref.invalidate(allPaymentsProvider);
+              ref.invalidate(expensesProvider);
 
-        await Future.wait([
-          ref.read(allInvoicesProvider.future),
-          ref.read(allPaymentsProvider.future),
-          ref.read(expensesProvider.future),
-        ]);
-      },
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-        children: [
-          _ReportHero(summary: summary, range: _range),
-
-          const SizedBox(height: 16),
-
-          _DatePresetSelector(
-            selected: _preset,
-            onChanged: (preset) {
-              setState(() {
-                _preset = preset;
-              });
+              await Future.wait([
+                ref.read(allInvoicesProvider.future),
+                ref.read(allPaymentsProvider.future),
+                ref.read(expensesProvider.future),
+              ]);
             },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 120),
+              children: [
+                _DatePresetSelector(
+                  selected: _preset,
+                  onChanged: (preset) {
+                    setState(() {
+                      _preset = preset;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                const _SectionHeading(
+                  title: 'Financial Overview',
+                  subtitle: 'Issued invoices and payment collections',
+                ),
+                const SizedBox(height: 9),
+                _FinancialMetrics(summary: summary),
+                const SizedBox(height: 17),
+                const _SectionHeading(
+                  title: 'Profitability',
+                  subtitle: 'Issued revenue compared with business expenses',
+                ),
+                const SizedBox(height: 9),
+                _ProfitabilityCard(summary: profitability),
+                const SizedBox(height: 17),
+                const _SectionHeading(
+                  title: 'Collection Status',
+                  subtitle: 'Payment position of issued invoices',
+                ),
+                const SizedBox(height: 9),
+                _PaymentStatusCard(summary: summary),
+                const SizedBox(height: 17),
+                const _SectionHeading(
+                  title: 'GST & Tax',
+                  subtitle: 'Tax values from issued invoices in this period',
+                ),
+                const SizedBox(height: 9),
+                _TaxSummaryCard(summary: summary),
+                const SizedBox(height: 17),
+                const _SectionHeading(
+                  title: 'Invoice Lifecycle',
+                  subtitle: 'Operational invoices retained in the period',
+                ),
+                const SizedBox(height: 9),
+                _LifecycleCard(summary: summary),
+                const SizedBox(height: 17),
+                const _SectionHeading(
+                  title: 'Detailed Reports',
+                  subtitle: 'Open focused invoice, payment and tax reports',
+                ),
+                const SizedBox(height: 9),
+                _DetailedReports(
+                  invoices: invoices,
+                  payments: payments,
+                  range: _range,
+                ),
+              ],
+            ),
           ),
-
-          const SizedBox(height: 18),
-
-          const _SectionHeading(
-            title: 'Financial Overview',
-            subtitle: 'Issued invoices and payment collections',
-          ),
-
-          const SizedBox(height: 10),
-
-          _FinancialMetrics(summary: summary),
-
-          const SizedBox(height: 18),
-
-          const _SectionHeading(
-            title: 'Profitability',
-            subtitle: 'Issued revenue compared with business expenses',
-          ),
-
-          const SizedBox(height: 10),
-
-          _ProfitabilityCard(summary: profitability),
-
-          const SizedBox(height: 18),
-
-          const _SectionHeading(
-            title: 'Collection Status',
-            subtitle: 'Payment position of issued invoices',
-          ),
-
-          const SizedBox(height: 10),
-
-          _PaymentStatusCard(summary: summary),
-
-          const SizedBox(height: 18),
-
-          const _SectionHeading(
-            title: 'GST & Tax',
-            subtitle: 'Tax values from issued invoices in this period',
-          ),
-
-          const SizedBox(height: 10),
-
-          _TaxSummaryCard(summary: summary),
-
-          const SizedBox(height: 18),
-
-          const _SectionHeading(
-            title: 'Invoice Lifecycle',
-            subtitle: 'Operational invoices retained in the period',
-          ),
-
-          const SizedBox(height: 10),
-
-          _LifecycleCard(summary: summary),
-
-          const SizedBox(height: 18),
-
-          _DetailedReports(
-            invoices: invoices,
-            payments: payments,
-            range: _range,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -427,20 +417,25 @@ class _ReportHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
-      padding: const EdgeInsets.all(19),
+      padding: const EdgeInsets.fromLTRB(15, 13, 15, 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryDark, AppTheme.primary],
+          colors: [
+            scheme.primary,
+            Color.lerp(scheme.primary, scheme.secondary, 0.58)!,
+          ],
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: .16),
-            blurRadius: 22,
-            offset: const Offset(0, 9),
+            color: scheme.primary.withValues(alpha: .13),
+            blurRadius: 17,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
@@ -450,20 +445,19 @@ class _ReportHero extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: .13),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.analytics_outlined,
                   color: Colors.white,
+                  size: 20,
                 ),
               ),
-
-              const SizedBox(width: 12),
-
+              const SizedBox(width: 10),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -472,52 +466,41 @@ class _ReportHero extends StatelessWidget {
                       'Financial Reports',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    SizedBox(height: 2),
                     Text(
                       'Billing, payments and outstanding',
-                      style: TextStyle(color: Colors.white70, fontSize: 10),
+                      style: TextStyle(color: Colors.white70, fontSize: 9.5),
                     ),
                   ],
                 ),
               ),
+              Text(
+                '\u20B9${MoneyUtils.paiseToRupeesText(summary.invoicedPaise)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ],
           ),
-
-          const SizedBox(height: 18),
-
-          Text(
-            '\u20B9${MoneyUtils.paiseToRupeesText(summary.invoicedPaise)}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -.5,
-            ),
-          ),
-
-          const SizedBox(height: 3),
-
-          const Text(
-            'Issued invoice value',
-            style: TextStyle(color: Colors.white70, fontSize: 10),
-          ),
-
-          const SizedBox(height: 16),
-
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: _HeroMetric(
-                  label: 'Payments Received',
+                  label: 'Collected',
                   value:
                       '\u20B9${MoneyUtils.paiseToRupeesText(summary.collectedPaise)}',
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               Expanded(
                 child: _HeroMetric(
                   label: 'Outstanding',
@@ -527,14 +510,12 @@ class _ReportHero extends StatelessWidget {
               ),
             ],
           ),
-
-          const SizedBox(height: 12),
-
+          const SizedBox(height: 8),
           Text(
             _rangeText(range),
             style: const TextStyle(
               color: Colors.white70,
-              fontSize: 9,
+              fontSize: 8.5,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -549,7 +530,6 @@ class _ReportHero extends StatelessWidget {
     }
 
     final formatter = DateFormat('dd MMM yyyy');
-
     return '${formatter.format(range.start!)} \u2022 ${formatter.format(range.end!)}';
   }
 }
@@ -722,8 +702,8 @@ class _MetricCard extends StatelessWidget {
 
     switch (semantic) {
       case _MetricSemantic.primary:
-        background = AppTheme.primarySoft;
-        foreground = AppTheme.primary;
+        background = Theme.of(context).colorScheme.primaryContainer;
+        foreground = Theme.of(context).colorScheme.primary;
 
       case _MetricSemantic.success:
         background = AppTheme.successSoft;
@@ -1019,12 +999,6 @@ class _DetailedReports extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeading(
-          title: 'Detailed Reports',
-          subtitle: 'Explore billing, payments, outstanding and tax',
-        ),
-        const SizedBox(height: 10),
-
         _DetailedReportTile(
           icon: Icons.receipt_long_outlined,
           title: 'Invoice Report',
@@ -1133,10 +1107,14 @@ class _DetailedReportTile extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: AppTheme.primarySoft,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Icon(icon, color: AppTheme.primary, size: 21),
+                child: Icon(
+                  icon,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 21,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(

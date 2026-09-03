@@ -150,6 +150,116 @@ class $CompaniesTable extends Companies
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _logoImageMeta = const VerificationMeta(
+    'logoImage',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> logoImage = GeneratedColumn<Uint8List>(
+    'logo_image',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _invoiceNumberModeMeta = const VerificationMeta(
+    'invoiceNumberMode',
+  );
+  @override
+  late final GeneratedColumn<String> invoiceNumberMode =
+      GeneratedColumn<String>(
+        'invoice_number_mode',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('standard'),
+      );
+  static const VerificationMeta _customInvoicePrefixMeta =
+      const VerificationMeta('customInvoicePrefix');
+  @override
+  late final GeneratedColumn<String> customInvoicePrefix =
+      GeneratedColumn<String>(
+        'custom_invoice_prefix',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _customInvoiceSeriesMeta =
+      const VerificationMeta('customInvoiceSeries');
+  @override
+  late final GeneratedColumn<String> customInvoiceSeries =
+      GeneratedColumn<String>(
+        'custom_invoice_series',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _applySignatureMeta = const VerificationMeta(
+    'applySignature',
+  );
+  @override
+  late final GeneratedColumn<bool> applySignature = GeneratedColumn<bool>(
+    'apply_signature',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("apply_signature" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _applySignatureToHistoricalMeta =
+      const VerificationMeta('applySignatureToHistorical');
+  @override
+  late final GeneratedColumn<bool> applySignatureToHistorical =
+      GeneratedColumn<bool>(
+        'apply_signature_to_historical',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("apply_signature_to_historical" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
+  static const VerificationMeta _signatureImageMeta = const VerificationMeta(
+    'signatureImage',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> signatureImage =
+      GeneratedColumn<Uint8List>(
+        'signature_image',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _signatoryNameMeta = const VerificationMeta(
+    'signatoryName',
+  );
+  @override
+  late final GeneratedColumn<String> signatoryName = GeneratedColumn<String>(
+    'signatory_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _signatoryDesignationMeta =
+      const VerificationMeta('signatoryDesignation');
+  @override
+  late final GeneratedColumn<String> signatoryDesignation =
+      GeneratedColumn<String>(
+        'signatory_designation',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _isActiveMeta = const VerificationMeta(
     'isActive',
   );
@@ -205,6 +315,15 @@ class $CompaniesTable extends Companies
     phone,
     email,
     logoPath,
+    logoImage,
+    invoiceNumberMode,
+    customInvoicePrefix,
+    customInvoiceSeries,
+    applySignature,
+    applySignatureToHistorical,
+    signatureImage,
+    signatoryName,
+    signatoryDesignation,
     isActive,
     createdAt,
     updatedAt,
@@ -310,6 +429,84 @@ class $CompaniesTable extends Companies
         logoPath.isAcceptableOrUnknown(data['logo_path']!, _logoPathMeta),
       );
     }
+    if (data.containsKey('logo_image')) {
+      context.handle(
+        _logoImageMeta,
+        logoImage.isAcceptableOrUnknown(data['logo_image']!, _logoImageMeta),
+      );
+    }
+    if (data.containsKey('invoice_number_mode')) {
+      context.handle(
+        _invoiceNumberModeMeta,
+        invoiceNumberMode.isAcceptableOrUnknown(
+          data['invoice_number_mode']!,
+          _invoiceNumberModeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('custom_invoice_prefix')) {
+      context.handle(
+        _customInvoicePrefixMeta,
+        customInvoicePrefix.isAcceptableOrUnknown(
+          data['custom_invoice_prefix']!,
+          _customInvoicePrefixMeta,
+        ),
+      );
+    }
+    if (data.containsKey('custom_invoice_series')) {
+      context.handle(
+        _customInvoiceSeriesMeta,
+        customInvoiceSeries.isAcceptableOrUnknown(
+          data['custom_invoice_series']!,
+          _customInvoiceSeriesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('apply_signature')) {
+      context.handle(
+        _applySignatureMeta,
+        applySignature.isAcceptableOrUnknown(
+          data['apply_signature']!,
+          _applySignatureMeta,
+        ),
+      );
+    }
+    if (data.containsKey('apply_signature_to_historical')) {
+      context.handle(
+        _applySignatureToHistoricalMeta,
+        applySignatureToHistorical.isAcceptableOrUnknown(
+          data['apply_signature_to_historical']!,
+          _applySignatureToHistoricalMeta,
+        ),
+      );
+    }
+    if (data.containsKey('signature_image')) {
+      context.handle(
+        _signatureImageMeta,
+        signatureImage.isAcceptableOrUnknown(
+          data['signature_image']!,
+          _signatureImageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('signatory_name')) {
+      context.handle(
+        _signatoryNameMeta,
+        signatoryName.isAcceptableOrUnknown(
+          data['signatory_name']!,
+          _signatoryNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('signatory_designation')) {
+      context.handle(
+        _signatoryDesignationMeta,
+        signatoryDesignation.isAcceptableOrUnknown(
+          data['signatory_designation']!,
+          _signatoryDesignationMeta,
+        ),
+      );
+    }
     if (data.containsKey('is_active')) {
       context.handle(
         _isActiveMeta,
@@ -393,6 +590,42 @@ class $CompaniesTable extends Companies
         DriftSqlType.string,
         data['${effectivePrefix}logo_path'],
       ),
+      logoImage: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}logo_image'],
+      ),
+      invoiceNumberMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}invoice_number_mode'],
+      )!,
+      customInvoicePrefix: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}custom_invoice_prefix'],
+      ),
+      customInvoiceSeries: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}custom_invoice_series'],
+      ),
+      applySignature: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}apply_signature'],
+      )!,
+      applySignatureToHistorical: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}apply_signature_to_historical'],
+      )!,
+      signatureImage: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}signature_image'],
+      ),
+      signatoryName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}signatory_name'],
+      ),
+      signatoryDesignation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}signatory_designation'],
+      ),
       isActive: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_active'],
@@ -429,6 +662,17 @@ class Company extends DataClass implements Insertable<Company> {
   final String? phone;
   final String? email;
   final String? logoPath;
+
+  /// Durable company logo bytes. Do not rely on Android source file paths.
+  final Uint8List? logoImage;
+  final String invoiceNumberMode;
+  final String? customInvoicePrefix;
+  final String? customInvoiceSeries;
+  final bool applySignature;
+  final bool applySignatureToHistorical;
+  final Uint8List? signatureImage;
+  final String? signatoryName;
+  final String? signatoryDesignation;
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -447,6 +691,15 @@ class Company extends DataClass implements Insertable<Company> {
     this.phone,
     this.email,
     this.logoPath,
+    this.logoImage,
+    required this.invoiceNumberMode,
+    this.customInvoicePrefix,
+    this.customInvoiceSeries,
+    required this.applySignature,
+    required this.applySignatureToHistorical,
+    this.signatureImage,
+    this.signatoryName,
+    this.signatoryDesignation,
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
@@ -492,6 +745,29 @@ class Company extends DataClass implements Insertable<Company> {
     if (!nullToAbsent || logoPath != null) {
       map['logo_path'] = Variable<String>(logoPath);
     }
+    if (!nullToAbsent || logoImage != null) {
+      map['logo_image'] = Variable<Uint8List>(logoImage);
+    }
+    map['invoice_number_mode'] = Variable<String>(invoiceNumberMode);
+    if (!nullToAbsent || customInvoicePrefix != null) {
+      map['custom_invoice_prefix'] = Variable<String>(customInvoicePrefix);
+    }
+    if (!nullToAbsent || customInvoiceSeries != null) {
+      map['custom_invoice_series'] = Variable<String>(customInvoiceSeries);
+    }
+    map['apply_signature'] = Variable<bool>(applySignature);
+    map['apply_signature_to_historical'] = Variable<bool>(
+      applySignatureToHistorical,
+    );
+    if (!nullToAbsent || signatureImage != null) {
+      map['signature_image'] = Variable<Uint8List>(signatureImage);
+    }
+    if (!nullToAbsent || signatoryName != null) {
+      map['signatory_name'] = Variable<String>(signatoryName);
+    }
+    if (!nullToAbsent || signatoryDesignation != null) {
+      map['signatory_designation'] = Variable<String>(signatoryDesignation);
+    }
     map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -534,6 +810,27 @@ class Company extends DataClass implements Insertable<Company> {
       logoPath: logoPath == null && nullToAbsent
           ? const Value.absent()
           : Value(logoPath),
+      logoImage: logoImage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(logoImage),
+      invoiceNumberMode: Value(invoiceNumberMode),
+      customInvoicePrefix: customInvoicePrefix == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customInvoicePrefix),
+      customInvoiceSeries: customInvoiceSeries == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customInvoiceSeries),
+      applySignature: Value(applySignature),
+      applySignatureToHistorical: Value(applySignatureToHistorical),
+      signatureImage: signatureImage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(signatureImage),
+      signatoryName: signatoryName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(signatoryName),
+      signatoryDesignation: signatoryDesignation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(signatoryDesignation),
       isActive: Value(isActive),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -560,6 +857,23 @@ class Company extends DataClass implements Insertable<Company> {
       phone: serializer.fromJson<String?>(json['phone']),
       email: serializer.fromJson<String?>(json['email']),
       logoPath: serializer.fromJson<String?>(json['logoPath']),
+      logoImage: serializer.fromJson<Uint8List?>(json['logoImage']),
+      invoiceNumberMode: serializer.fromJson<String>(json['invoiceNumberMode']),
+      customInvoicePrefix: serializer.fromJson<String?>(
+        json['customInvoicePrefix'],
+      ),
+      customInvoiceSeries: serializer.fromJson<String?>(
+        json['customInvoiceSeries'],
+      ),
+      applySignature: serializer.fromJson<bool>(json['applySignature']),
+      applySignatureToHistorical: serializer.fromJson<bool>(
+        json['applySignatureToHistorical'],
+      ),
+      signatureImage: serializer.fromJson<Uint8List?>(json['signatureImage']),
+      signatoryName: serializer.fromJson<String?>(json['signatoryName']),
+      signatoryDesignation: serializer.fromJson<String?>(
+        json['signatoryDesignation'],
+      ),
       isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -583,6 +897,17 @@ class Company extends DataClass implements Insertable<Company> {
       'phone': serializer.toJson<String?>(phone),
       'email': serializer.toJson<String?>(email),
       'logoPath': serializer.toJson<String?>(logoPath),
+      'logoImage': serializer.toJson<Uint8List?>(logoImage),
+      'invoiceNumberMode': serializer.toJson<String>(invoiceNumberMode),
+      'customInvoicePrefix': serializer.toJson<String?>(customInvoicePrefix),
+      'customInvoiceSeries': serializer.toJson<String?>(customInvoiceSeries),
+      'applySignature': serializer.toJson<bool>(applySignature),
+      'applySignatureToHistorical': serializer.toJson<bool>(
+        applySignatureToHistorical,
+      ),
+      'signatureImage': serializer.toJson<Uint8List?>(signatureImage),
+      'signatoryName': serializer.toJson<String?>(signatoryName),
+      'signatoryDesignation': serializer.toJson<String?>(signatoryDesignation),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -604,6 +929,15 @@ class Company extends DataClass implements Insertable<Company> {
     Value<String?> phone = const Value.absent(),
     Value<String?> email = const Value.absent(),
     Value<String?> logoPath = const Value.absent(),
+    Value<Uint8List?> logoImage = const Value.absent(),
+    String? invoiceNumberMode,
+    Value<String?> customInvoicePrefix = const Value.absent(),
+    Value<String?> customInvoiceSeries = const Value.absent(),
+    bool? applySignature,
+    bool? applySignatureToHistorical,
+    Value<Uint8List?> signatureImage = const Value.absent(),
+    Value<String?> signatoryName = const Value.absent(),
+    Value<String?> signatoryDesignation = const Value.absent(),
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -622,6 +956,26 @@ class Company extends DataClass implements Insertable<Company> {
     phone: phone.present ? phone.value : this.phone,
     email: email.present ? email.value : this.email,
     logoPath: logoPath.present ? logoPath.value : this.logoPath,
+    logoImage: logoImage.present ? logoImage.value : this.logoImage,
+    invoiceNumberMode: invoiceNumberMode ?? this.invoiceNumberMode,
+    customInvoicePrefix: customInvoicePrefix.present
+        ? customInvoicePrefix.value
+        : this.customInvoicePrefix,
+    customInvoiceSeries: customInvoiceSeries.present
+        ? customInvoiceSeries.value
+        : this.customInvoiceSeries,
+    applySignature: applySignature ?? this.applySignature,
+    applySignatureToHistorical:
+        applySignatureToHistorical ?? this.applySignatureToHistorical,
+    signatureImage: signatureImage.present
+        ? signatureImage.value
+        : this.signatureImage,
+    signatoryName: signatoryName.present
+        ? signatoryName.value
+        : this.signatoryName,
+    signatoryDesignation: signatoryDesignation.present
+        ? signatoryDesignation.value
+        : this.signatoryDesignation,
     isActive: isActive ?? this.isActive,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -646,6 +1000,31 @@ class Company extends DataClass implements Insertable<Company> {
       phone: data.phone.present ? data.phone.value : this.phone,
       email: data.email.present ? data.email.value : this.email,
       logoPath: data.logoPath.present ? data.logoPath.value : this.logoPath,
+      logoImage: data.logoImage.present ? data.logoImage.value : this.logoImage,
+      invoiceNumberMode: data.invoiceNumberMode.present
+          ? data.invoiceNumberMode.value
+          : this.invoiceNumberMode,
+      customInvoicePrefix: data.customInvoicePrefix.present
+          ? data.customInvoicePrefix.value
+          : this.customInvoicePrefix,
+      customInvoiceSeries: data.customInvoiceSeries.present
+          ? data.customInvoiceSeries.value
+          : this.customInvoiceSeries,
+      applySignature: data.applySignature.present
+          ? data.applySignature.value
+          : this.applySignature,
+      applySignatureToHistorical: data.applySignatureToHistorical.present
+          ? data.applySignatureToHistorical.value
+          : this.applySignatureToHistorical,
+      signatureImage: data.signatureImage.present
+          ? data.signatureImage.value
+          : this.signatureImage,
+      signatoryName: data.signatoryName.present
+          ? data.signatoryName.value
+          : this.signatoryName,
+      signatoryDesignation: data.signatoryDesignation.present
+          ? data.signatoryDesignation.value
+          : this.signatoryDesignation,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -669,6 +1048,15 @@ class Company extends DataClass implements Insertable<Company> {
           ..write('phone: $phone, ')
           ..write('email: $email, ')
           ..write('logoPath: $logoPath, ')
+          ..write('logoImage: $logoImage, ')
+          ..write('invoiceNumberMode: $invoiceNumberMode, ')
+          ..write('customInvoicePrefix: $customInvoicePrefix, ')
+          ..write('customInvoiceSeries: $customInvoiceSeries, ')
+          ..write('applySignature: $applySignature, ')
+          ..write('applySignatureToHistorical: $applySignatureToHistorical, ')
+          ..write('signatureImage: $signatureImage, ')
+          ..write('signatoryName: $signatoryName, ')
+          ..write('signatoryDesignation: $signatoryDesignation, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -677,7 +1065,7 @@ class Company extends DataClass implements Insertable<Company> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     ownerUserId,
     companyName,
@@ -692,10 +1080,19 @@ class Company extends DataClass implements Insertable<Company> {
     phone,
     email,
     logoPath,
+    $driftBlobEquality.hash(logoImage),
+    invoiceNumberMode,
+    customInvoicePrefix,
+    customInvoiceSeries,
+    applySignature,
+    applySignatureToHistorical,
+    $driftBlobEquality.hash(signatureImage),
+    signatoryName,
+    signatoryDesignation,
     isActive,
     createdAt,
     updatedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -714,6 +1111,18 @@ class Company extends DataClass implements Insertable<Company> {
           other.phone == this.phone &&
           other.email == this.email &&
           other.logoPath == this.logoPath &&
+          $driftBlobEquality.equals(other.logoImage, this.logoImage) &&
+          other.invoiceNumberMode == this.invoiceNumberMode &&
+          other.customInvoicePrefix == this.customInvoicePrefix &&
+          other.customInvoiceSeries == this.customInvoiceSeries &&
+          other.applySignature == this.applySignature &&
+          other.applySignatureToHistorical == this.applySignatureToHistorical &&
+          $driftBlobEquality.equals(
+            other.signatureImage,
+            this.signatureImage,
+          ) &&
+          other.signatoryName == this.signatoryName &&
+          other.signatoryDesignation == this.signatoryDesignation &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -734,6 +1143,15 @@ class CompaniesCompanion extends UpdateCompanion<Company> {
   final Value<String?> phone;
   final Value<String?> email;
   final Value<String?> logoPath;
+  final Value<Uint8List?> logoImage;
+  final Value<String> invoiceNumberMode;
+  final Value<String?> customInvoicePrefix;
+  final Value<String?> customInvoiceSeries;
+  final Value<bool> applySignature;
+  final Value<bool> applySignatureToHistorical;
+  final Value<Uint8List?> signatureImage;
+  final Value<String?> signatoryName;
+  final Value<String?> signatoryDesignation;
   final Value<bool> isActive;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -753,6 +1171,15 @@ class CompaniesCompanion extends UpdateCompanion<Company> {
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
     this.logoPath = const Value.absent(),
+    this.logoImage = const Value.absent(),
+    this.invoiceNumberMode = const Value.absent(),
+    this.customInvoicePrefix = const Value.absent(),
+    this.customInvoiceSeries = const Value.absent(),
+    this.applySignature = const Value.absent(),
+    this.applySignatureToHistorical = const Value.absent(),
+    this.signatureImage = const Value.absent(),
+    this.signatoryName = const Value.absent(),
+    this.signatoryDesignation = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -773,6 +1200,15 @@ class CompaniesCompanion extends UpdateCompanion<Company> {
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
     this.logoPath = const Value.absent(),
+    this.logoImage = const Value.absent(),
+    this.invoiceNumberMode = const Value.absent(),
+    this.customInvoicePrefix = const Value.absent(),
+    this.customInvoiceSeries = const Value.absent(),
+    this.applySignature = const Value.absent(),
+    this.applySignatureToHistorical = const Value.absent(),
+    this.signatureImage = const Value.absent(),
+    this.signatoryName = const Value.absent(),
+    this.signatoryDesignation = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -793,6 +1229,15 @@ class CompaniesCompanion extends UpdateCompanion<Company> {
     Expression<String>? phone,
     Expression<String>? email,
     Expression<String>? logoPath,
+    Expression<Uint8List>? logoImage,
+    Expression<String>? invoiceNumberMode,
+    Expression<String>? customInvoicePrefix,
+    Expression<String>? customInvoiceSeries,
+    Expression<bool>? applySignature,
+    Expression<bool>? applySignatureToHistorical,
+    Expression<Uint8List>? signatureImage,
+    Expression<String>? signatoryName,
+    Expression<String>? signatoryDesignation,
     Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -813,6 +1258,19 @@ class CompaniesCompanion extends UpdateCompanion<Company> {
       if (phone != null) 'phone': phone,
       if (email != null) 'email': email,
       if (logoPath != null) 'logo_path': logoPath,
+      if (logoImage != null) 'logo_image': logoImage,
+      if (invoiceNumberMode != null) 'invoice_number_mode': invoiceNumberMode,
+      if (customInvoicePrefix != null)
+        'custom_invoice_prefix': customInvoicePrefix,
+      if (customInvoiceSeries != null)
+        'custom_invoice_series': customInvoiceSeries,
+      if (applySignature != null) 'apply_signature': applySignature,
+      if (applySignatureToHistorical != null)
+        'apply_signature_to_historical': applySignatureToHistorical,
+      if (signatureImage != null) 'signature_image': signatureImage,
+      if (signatoryName != null) 'signatory_name': signatoryName,
+      if (signatoryDesignation != null)
+        'signatory_designation': signatoryDesignation,
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -835,6 +1293,15 @@ class CompaniesCompanion extends UpdateCompanion<Company> {
     Value<String?>? phone,
     Value<String?>? email,
     Value<String?>? logoPath,
+    Value<Uint8List?>? logoImage,
+    Value<String>? invoiceNumberMode,
+    Value<String?>? customInvoicePrefix,
+    Value<String?>? customInvoiceSeries,
+    Value<bool>? applySignature,
+    Value<bool>? applySignatureToHistorical,
+    Value<Uint8List?>? signatureImage,
+    Value<String?>? signatoryName,
+    Value<String?>? signatoryDesignation,
     Value<bool>? isActive,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -855,6 +1322,16 @@ class CompaniesCompanion extends UpdateCompanion<Company> {
       phone: phone ?? this.phone,
       email: email ?? this.email,
       logoPath: logoPath ?? this.logoPath,
+      logoImage: logoImage ?? this.logoImage,
+      invoiceNumberMode: invoiceNumberMode ?? this.invoiceNumberMode,
+      customInvoicePrefix: customInvoicePrefix ?? this.customInvoicePrefix,
+      customInvoiceSeries: customInvoiceSeries ?? this.customInvoiceSeries,
+      applySignature: applySignature ?? this.applySignature,
+      applySignatureToHistorical:
+          applySignatureToHistorical ?? this.applySignatureToHistorical,
+      signatureImage: signatureImage ?? this.signatureImage,
+      signatoryName: signatoryName ?? this.signatoryName,
+      signatoryDesignation: signatoryDesignation ?? this.signatoryDesignation,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -907,6 +1384,41 @@ class CompaniesCompanion extends UpdateCompanion<Company> {
     if (logoPath.present) {
       map['logo_path'] = Variable<String>(logoPath.value);
     }
+    if (logoImage.present) {
+      map['logo_image'] = Variable<Uint8List>(logoImage.value);
+    }
+    if (invoiceNumberMode.present) {
+      map['invoice_number_mode'] = Variable<String>(invoiceNumberMode.value);
+    }
+    if (customInvoicePrefix.present) {
+      map['custom_invoice_prefix'] = Variable<String>(
+        customInvoicePrefix.value,
+      );
+    }
+    if (customInvoiceSeries.present) {
+      map['custom_invoice_series'] = Variable<String>(
+        customInvoiceSeries.value,
+      );
+    }
+    if (applySignature.present) {
+      map['apply_signature'] = Variable<bool>(applySignature.value);
+    }
+    if (applySignatureToHistorical.present) {
+      map['apply_signature_to_historical'] = Variable<bool>(
+        applySignatureToHistorical.value,
+      );
+    }
+    if (signatureImage.present) {
+      map['signature_image'] = Variable<Uint8List>(signatureImage.value);
+    }
+    if (signatoryName.present) {
+      map['signatory_name'] = Variable<String>(signatoryName.value);
+    }
+    if (signatoryDesignation.present) {
+      map['signatory_designation'] = Variable<String>(
+        signatoryDesignation.value,
+      );
+    }
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
     }
@@ -939,6 +1451,15 @@ class CompaniesCompanion extends UpdateCompanion<Company> {
           ..write('phone: $phone, ')
           ..write('email: $email, ')
           ..write('logoPath: $logoPath, ')
+          ..write('logoImage: $logoImage, ')
+          ..write('invoiceNumberMode: $invoiceNumberMode, ')
+          ..write('customInvoicePrefix: $customInvoicePrefix, ')
+          ..write('customInvoiceSeries: $customInvoiceSeries, ')
+          ..write('applySignature: $applySignature, ')
+          ..write('applySignatureToHistorical: $applySignatureToHistorical, ')
+          ..write('signatureImage: $signatureImage, ')
+          ..write('signatoryName: $signatoryName, ')
+          ..write('signatoryDesignation: $signatoryDesignation, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -1865,6 +2386,20 @@ class $VendorCodesTable extends VendorCodes
       'REFERENCES companies (id) ON DELETE CASCADE',
     ),
   );
+  static const VerificationMeta _partyIdMeta = const VerificationMeta(
+    'partyId',
+  );
+  @override
+  late final GeneratedColumn<String> partyId = GeneratedColumn<String>(
+    'party_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES parties (id) ON DELETE CASCADE',
+    ),
+  );
   static const VerificationMeta _vendorCodeMeta = const VerificationMeta(
     'vendorCode',
   );
@@ -1918,6 +2453,7 @@ class $VendorCodesTable extends VendorCodes
   List<GeneratedColumn> get $columns => [
     id,
     companyId,
+    partyId,
     vendorCode,
     description,
     isActive,
@@ -1945,6 +2481,12 @@ class $VendorCodesTable extends VendorCodes
       );
     } else if (isInserting) {
       context.missing(_companyIdMeta);
+    }
+    if (data.containsKey('party_id')) {
+      context.handle(
+        _partyIdMeta,
+        partyId.isAcceptableOrUnknown(data['party_id']!, _partyIdMeta),
+      );
     }
     if (data.containsKey('vendor_code')) {
       context.handle(
@@ -1982,7 +2524,7 @@ class $VendorCodesTable extends VendorCodes
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {companyId, vendorCode},
+    {companyId, partyId},
   ];
   @override
   VendorCode map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -1996,6 +2538,10 @@ class $VendorCodesTable extends VendorCodes
         DriftSqlType.string,
         data['${effectivePrefix}company_id'],
       )!,
+      partyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}party_id'],
+      ),
       vendorCode: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}vendor_code'],
@@ -2024,6 +2570,7 @@ class $VendorCodesTable extends VendorCodes
 class VendorCode extends DataClass implements Insertable<VendorCode> {
   final String id;
   final String companyId;
+  final String? partyId;
   final String vendorCode;
   final String? description;
   final bool isActive;
@@ -2031,6 +2578,7 @@ class VendorCode extends DataClass implements Insertable<VendorCode> {
   const VendorCode({
     required this.id,
     required this.companyId,
+    this.partyId,
     required this.vendorCode,
     this.description,
     required this.isActive,
@@ -2041,6 +2589,9 @@ class VendorCode extends DataClass implements Insertable<VendorCode> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['company_id'] = Variable<String>(companyId);
+    if (!nullToAbsent || partyId != null) {
+      map['party_id'] = Variable<String>(partyId);
+    }
     map['vendor_code'] = Variable<String>(vendorCode);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
@@ -2054,6 +2605,9 @@ class VendorCode extends DataClass implements Insertable<VendorCode> {
     return VendorCodesCompanion(
       id: Value(id),
       companyId: Value(companyId),
+      partyId: partyId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(partyId),
       vendorCode: Value(vendorCode),
       description: description == null && nullToAbsent
           ? const Value.absent()
@@ -2071,6 +2625,7 @@ class VendorCode extends DataClass implements Insertable<VendorCode> {
     return VendorCode(
       id: serializer.fromJson<String>(json['id']),
       companyId: serializer.fromJson<String>(json['companyId']),
+      partyId: serializer.fromJson<String?>(json['partyId']),
       vendorCode: serializer.fromJson<String>(json['vendorCode']),
       description: serializer.fromJson<String?>(json['description']),
       isActive: serializer.fromJson<bool>(json['isActive']),
@@ -2083,6 +2638,7 @@ class VendorCode extends DataClass implements Insertable<VendorCode> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'companyId': serializer.toJson<String>(companyId),
+      'partyId': serializer.toJson<String?>(partyId),
       'vendorCode': serializer.toJson<String>(vendorCode),
       'description': serializer.toJson<String?>(description),
       'isActive': serializer.toJson<bool>(isActive),
@@ -2093,6 +2649,7 @@ class VendorCode extends DataClass implements Insertable<VendorCode> {
   VendorCode copyWith({
     String? id,
     String? companyId,
+    Value<String?> partyId = const Value.absent(),
     String? vendorCode,
     Value<String?> description = const Value.absent(),
     bool? isActive,
@@ -2100,6 +2657,7 @@ class VendorCode extends DataClass implements Insertable<VendorCode> {
   }) => VendorCode(
     id: id ?? this.id,
     companyId: companyId ?? this.companyId,
+    partyId: partyId.present ? partyId.value : this.partyId,
     vendorCode: vendorCode ?? this.vendorCode,
     description: description.present ? description.value : this.description,
     isActive: isActive ?? this.isActive,
@@ -2109,6 +2667,7 @@ class VendorCode extends DataClass implements Insertable<VendorCode> {
     return VendorCode(
       id: data.id.present ? data.id.value : this.id,
       companyId: data.companyId.present ? data.companyId.value : this.companyId,
+      partyId: data.partyId.present ? data.partyId.value : this.partyId,
       vendorCode: data.vendorCode.present
           ? data.vendorCode.value
           : this.vendorCode,
@@ -2125,6 +2684,7 @@ class VendorCode extends DataClass implements Insertable<VendorCode> {
     return (StringBuffer('VendorCode(')
           ..write('id: $id, ')
           ..write('companyId: $companyId, ')
+          ..write('partyId: $partyId, ')
           ..write('vendorCode: $vendorCode, ')
           ..write('description: $description, ')
           ..write('isActive: $isActive, ')
@@ -2134,14 +2694,22 @@ class VendorCode extends DataClass implements Insertable<VendorCode> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, companyId, vendorCode, description, isActive, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    companyId,
+    partyId,
+    vendorCode,
+    description,
+    isActive,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is VendorCode &&
           other.id == this.id &&
           other.companyId == this.companyId &&
+          other.partyId == this.partyId &&
           other.vendorCode == this.vendorCode &&
           other.description == this.description &&
           other.isActive == this.isActive &&
@@ -2151,6 +2719,7 @@ class VendorCode extends DataClass implements Insertable<VendorCode> {
 class VendorCodesCompanion extends UpdateCompanion<VendorCode> {
   final Value<String> id;
   final Value<String> companyId;
+  final Value<String?> partyId;
   final Value<String> vendorCode;
   final Value<String?> description;
   final Value<bool> isActive;
@@ -2159,6 +2728,7 @@ class VendorCodesCompanion extends UpdateCompanion<VendorCode> {
   const VendorCodesCompanion({
     this.id = const Value.absent(),
     this.companyId = const Value.absent(),
+    this.partyId = const Value.absent(),
     this.vendorCode = const Value.absent(),
     this.description = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -2168,6 +2738,7 @@ class VendorCodesCompanion extends UpdateCompanion<VendorCode> {
   VendorCodesCompanion.insert({
     this.id = const Value.absent(),
     required String companyId,
+    this.partyId = const Value.absent(),
     required String vendorCode,
     this.description = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -2178,6 +2749,7 @@ class VendorCodesCompanion extends UpdateCompanion<VendorCode> {
   static Insertable<VendorCode> custom({
     Expression<String>? id,
     Expression<String>? companyId,
+    Expression<String>? partyId,
     Expression<String>? vendorCode,
     Expression<String>? description,
     Expression<bool>? isActive,
@@ -2187,6 +2759,7 @@ class VendorCodesCompanion extends UpdateCompanion<VendorCode> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (companyId != null) 'company_id': companyId,
+      if (partyId != null) 'party_id': partyId,
       if (vendorCode != null) 'vendor_code': vendorCode,
       if (description != null) 'description': description,
       if (isActive != null) 'is_active': isActive,
@@ -2198,6 +2771,7 @@ class VendorCodesCompanion extends UpdateCompanion<VendorCode> {
   VendorCodesCompanion copyWith({
     Value<String>? id,
     Value<String>? companyId,
+    Value<String?>? partyId,
     Value<String>? vendorCode,
     Value<String?>? description,
     Value<bool>? isActive,
@@ -2207,6 +2781,7 @@ class VendorCodesCompanion extends UpdateCompanion<VendorCode> {
     return VendorCodesCompanion(
       id: id ?? this.id,
       companyId: companyId ?? this.companyId,
+      partyId: partyId ?? this.partyId,
       vendorCode: vendorCode ?? this.vendorCode,
       description: description ?? this.description,
       isActive: isActive ?? this.isActive,
@@ -2223,6 +2798,9 @@ class VendorCodesCompanion extends UpdateCompanion<VendorCode> {
     }
     if (companyId.present) {
       map['company_id'] = Variable<String>(companyId.value);
+    }
+    if (partyId.present) {
+      map['party_id'] = Variable<String>(partyId.value);
     }
     if (vendorCode.present) {
       map['vendor_code'] = Variable<String>(vendorCode.value);
@@ -2247,6 +2825,7 @@ class VendorCodesCompanion extends UpdateCompanion<VendorCode> {
     return (StringBuffer('VendorCodesCompanion(')
           ..write('id: $id, ')
           ..write('companyId: $companyId, ')
+          ..write('partyId: $partyId, ')
           ..write('vendorCode: $vendorCode, ')
           ..write('description: $description, ')
           ..write('isActive: $isActive, ')
@@ -2284,6 +2863,20 @@ class $SitesTable extends Sites with TableInfo<$SitesTable, Site> {
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'REFERENCES companies (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _partyIdMeta = const VerificationMeta(
+    'partyId',
+  );
+  @override
+  late final GeneratedColumn<String> partyId = GeneratedColumn<String>(
+    'party_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES parties (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _siteNameMeta = const VerificationMeta(
@@ -2339,6 +2932,7 @@ class $SitesTable extends Sites with TableInfo<$SitesTable, Site> {
   List<GeneratedColumn> get $columns => [
     id,
     companyId,
+    partyId,
     siteName,
     siteCode,
     isActive,
@@ -2366,6 +2960,12 @@ class $SitesTable extends Sites with TableInfo<$SitesTable, Site> {
       );
     } else if (isInserting) {
       context.missing(_companyIdMeta);
+    }
+    if (data.containsKey('party_id')) {
+      context.handle(
+        _partyIdMeta,
+        partyId.isAcceptableOrUnknown(data['party_id']!, _partyIdMeta),
+      );
     }
     if (data.containsKey('site_name')) {
       context.handle(
@@ -2410,6 +3010,10 @@ class $SitesTable extends Sites with TableInfo<$SitesTable, Site> {
         DriftSqlType.string,
         data['${effectivePrefix}company_id'],
       )!,
+      partyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}party_id'],
+      ),
       siteName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}site_name'],
@@ -2438,6 +3042,7 @@ class $SitesTable extends Sites with TableInfo<$SitesTable, Site> {
 class Site extends DataClass implements Insertable<Site> {
   final String id;
   final String companyId;
+  final String? partyId;
   final String siteName;
   final String? siteCode;
   final bool isActive;
@@ -2445,6 +3050,7 @@ class Site extends DataClass implements Insertable<Site> {
   const Site({
     required this.id,
     required this.companyId,
+    this.partyId,
     required this.siteName,
     this.siteCode,
     required this.isActive,
@@ -2455,6 +3061,9 @@ class Site extends DataClass implements Insertable<Site> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['company_id'] = Variable<String>(companyId);
+    if (!nullToAbsent || partyId != null) {
+      map['party_id'] = Variable<String>(partyId);
+    }
     map['site_name'] = Variable<String>(siteName);
     if (!nullToAbsent || siteCode != null) {
       map['site_code'] = Variable<String>(siteCode);
@@ -2468,6 +3077,9 @@ class Site extends DataClass implements Insertable<Site> {
     return SitesCompanion(
       id: Value(id),
       companyId: Value(companyId),
+      partyId: partyId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(partyId),
       siteName: Value(siteName),
       siteCode: siteCode == null && nullToAbsent
           ? const Value.absent()
@@ -2485,6 +3097,7 @@ class Site extends DataClass implements Insertable<Site> {
     return Site(
       id: serializer.fromJson<String>(json['id']),
       companyId: serializer.fromJson<String>(json['companyId']),
+      partyId: serializer.fromJson<String?>(json['partyId']),
       siteName: serializer.fromJson<String>(json['siteName']),
       siteCode: serializer.fromJson<String?>(json['siteCode']),
       isActive: serializer.fromJson<bool>(json['isActive']),
@@ -2497,6 +3110,7 @@ class Site extends DataClass implements Insertable<Site> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'companyId': serializer.toJson<String>(companyId),
+      'partyId': serializer.toJson<String?>(partyId),
       'siteName': serializer.toJson<String>(siteName),
       'siteCode': serializer.toJson<String?>(siteCode),
       'isActive': serializer.toJson<bool>(isActive),
@@ -2507,6 +3121,7 @@ class Site extends DataClass implements Insertable<Site> {
   Site copyWith({
     String? id,
     String? companyId,
+    Value<String?> partyId = const Value.absent(),
     String? siteName,
     Value<String?> siteCode = const Value.absent(),
     bool? isActive,
@@ -2514,6 +3129,7 @@ class Site extends DataClass implements Insertable<Site> {
   }) => Site(
     id: id ?? this.id,
     companyId: companyId ?? this.companyId,
+    partyId: partyId.present ? partyId.value : this.partyId,
     siteName: siteName ?? this.siteName,
     siteCode: siteCode.present ? siteCode.value : this.siteCode,
     isActive: isActive ?? this.isActive,
@@ -2523,6 +3139,7 @@ class Site extends DataClass implements Insertable<Site> {
     return Site(
       id: data.id.present ? data.id.value : this.id,
       companyId: data.companyId.present ? data.companyId.value : this.companyId,
+      partyId: data.partyId.present ? data.partyId.value : this.partyId,
       siteName: data.siteName.present ? data.siteName.value : this.siteName,
       siteCode: data.siteCode.present ? data.siteCode.value : this.siteCode,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
@@ -2535,6 +3152,7 @@ class Site extends DataClass implements Insertable<Site> {
     return (StringBuffer('Site(')
           ..write('id: $id, ')
           ..write('companyId: $companyId, ')
+          ..write('partyId: $partyId, ')
           ..write('siteName: $siteName, ')
           ..write('siteCode: $siteCode, ')
           ..write('isActive: $isActive, ')
@@ -2544,14 +3162,22 @@ class Site extends DataClass implements Insertable<Site> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, companyId, siteName, siteCode, isActive, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    companyId,
+    partyId,
+    siteName,
+    siteCode,
+    isActive,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Site &&
           other.id == this.id &&
           other.companyId == this.companyId &&
+          other.partyId == this.partyId &&
           other.siteName == this.siteName &&
           other.siteCode == this.siteCode &&
           other.isActive == this.isActive &&
@@ -2561,6 +3187,7 @@ class Site extends DataClass implements Insertable<Site> {
 class SitesCompanion extends UpdateCompanion<Site> {
   final Value<String> id;
   final Value<String> companyId;
+  final Value<String?> partyId;
   final Value<String> siteName;
   final Value<String?> siteCode;
   final Value<bool> isActive;
@@ -2569,6 +3196,7 @@ class SitesCompanion extends UpdateCompanion<Site> {
   const SitesCompanion({
     this.id = const Value.absent(),
     this.companyId = const Value.absent(),
+    this.partyId = const Value.absent(),
     this.siteName = const Value.absent(),
     this.siteCode = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -2578,6 +3206,7 @@ class SitesCompanion extends UpdateCompanion<Site> {
   SitesCompanion.insert({
     this.id = const Value.absent(),
     required String companyId,
+    this.partyId = const Value.absent(),
     required String siteName,
     this.siteCode = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -2588,6 +3217,7 @@ class SitesCompanion extends UpdateCompanion<Site> {
   static Insertable<Site> custom({
     Expression<String>? id,
     Expression<String>? companyId,
+    Expression<String>? partyId,
     Expression<String>? siteName,
     Expression<String>? siteCode,
     Expression<bool>? isActive,
@@ -2597,6 +3227,7 @@ class SitesCompanion extends UpdateCompanion<Site> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (companyId != null) 'company_id': companyId,
+      if (partyId != null) 'party_id': partyId,
       if (siteName != null) 'site_name': siteName,
       if (siteCode != null) 'site_code': siteCode,
       if (isActive != null) 'is_active': isActive,
@@ -2608,6 +3239,7 @@ class SitesCompanion extends UpdateCompanion<Site> {
   SitesCompanion copyWith({
     Value<String>? id,
     Value<String>? companyId,
+    Value<String?>? partyId,
     Value<String>? siteName,
     Value<String?>? siteCode,
     Value<bool>? isActive,
@@ -2617,6 +3249,7 @@ class SitesCompanion extends UpdateCompanion<Site> {
     return SitesCompanion(
       id: id ?? this.id,
       companyId: companyId ?? this.companyId,
+      partyId: partyId ?? this.partyId,
       siteName: siteName ?? this.siteName,
       siteCode: siteCode ?? this.siteCode,
       isActive: isActive ?? this.isActive,
@@ -2633,6 +3266,9 @@ class SitesCompanion extends UpdateCompanion<Site> {
     }
     if (companyId.present) {
       map['company_id'] = Variable<String>(companyId.value);
+    }
+    if (partyId.present) {
+      map['party_id'] = Variable<String>(partyId.value);
     }
     if (siteName.present) {
       map['site_name'] = Variable<String>(siteName.value);
@@ -2657,6 +3293,7 @@ class SitesCompanion extends UpdateCompanion<Site> {
     return (StringBuffer('SitesCompanion(')
           ..write('id: $id, ')
           ..write('companyId: $companyId, ')
+          ..write('partyId: $partyId, ')
           ..write('siteName: $siteName, ')
           ..write('siteCode: $siteCode, ')
           ..write('isActive: $isActive, ')
@@ -3684,6 +4321,80 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _companyLogoSnapshotMeta =
+      const VerificationMeta('companyLogoSnapshot');
+  @override
+  late final GeneratedColumn<Uint8List> companyLogoSnapshot =
+      GeneratedColumn<Uint8List>(
+        'company_logo_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _signatureAppliedSnapshotMeta =
+      const VerificationMeta('signatureAppliedSnapshot');
+  @override
+  late final GeneratedColumn<bool> signatureAppliedSnapshot =
+      GeneratedColumn<bool>(
+        'signature_applied_snapshot',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("signature_applied_snapshot" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
+  static const VerificationMeta _signatureImageSnapshotMeta =
+      const VerificationMeta('signatureImageSnapshot');
+  @override
+  late final GeneratedColumn<Uint8List> signatureImageSnapshot =
+      GeneratedColumn<Uint8List>(
+        'signature_image_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _signatoryNameSnapshotMeta =
+      const VerificationMeta('signatoryNameSnapshot');
+  @override
+  late final GeneratedColumn<String> signatoryNameSnapshot =
+      GeneratedColumn<String>(
+        'signatory_name_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _signatoryDesignationSnapshotMeta =
+      const VerificationMeta('signatoryDesignationSnapshot');
+  @override
+  late final GeneratedColumn<String> signatoryDesignationSnapshot =
+      GeneratedColumn<String>(
+        'signatory_designation_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _signatureEligibleMeta = const VerificationMeta(
+    'signatureEligible',
+  );
+  @override
+  late final GeneratedColumn<bool> signatureEligible = GeneratedColumn<bool>(
+    'signature_eligible',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("signature_eligible" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _partyNameSnapshotMeta = const VerificationMeta(
     'partyNameSnapshot',
   );
@@ -3980,6 +4691,12 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
     companyAddress3Snapshot,
     companyPanSnapshot,
     companyGstinSnapshot,
+    companyLogoSnapshot,
+    signatureAppliedSnapshot,
+    signatureImageSnapshot,
+    signatoryNameSnapshot,
+    signatoryDesignationSnapshot,
+    signatureEligible,
     partyNameSnapshot,
     partyAddress1Snapshot,
     partyAddress2Snapshot,
@@ -4154,6 +4871,60 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
         companyGstinSnapshot.isAcceptableOrUnknown(
           data['company_gstin_snapshot']!,
           _companyGstinSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('company_logo_snapshot')) {
+      context.handle(
+        _companyLogoSnapshotMeta,
+        companyLogoSnapshot.isAcceptableOrUnknown(
+          data['company_logo_snapshot']!,
+          _companyLogoSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('signature_applied_snapshot')) {
+      context.handle(
+        _signatureAppliedSnapshotMeta,
+        signatureAppliedSnapshot.isAcceptableOrUnknown(
+          data['signature_applied_snapshot']!,
+          _signatureAppliedSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('signature_image_snapshot')) {
+      context.handle(
+        _signatureImageSnapshotMeta,
+        signatureImageSnapshot.isAcceptableOrUnknown(
+          data['signature_image_snapshot']!,
+          _signatureImageSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('signatory_name_snapshot')) {
+      context.handle(
+        _signatoryNameSnapshotMeta,
+        signatoryNameSnapshot.isAcceptableOrUnknown(
+          data['signatory_name_snapshot']!,
+          _signatoryNameSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('signatory_designation_snapshot')) {
+      context.handle(
+        _signatoryDesignationSnapshotMeta,
+        signatoryDesignationSnapshot.isAcceptableOrUnknown(
+          data['signatory_designation_snapshot']!,
+          _signatoryDesignationSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('signature_eligible')) {
+      context.handle(
+        _signatureEligibleMeta,
+        signatureEligible.isAcceptableOrUnknown(
+          data['signature_eligible']!,
+          _signatureEligibleMeta,
         ),
       );
     }
@@ -4429,6 +5200,30 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
         DriftSqlType.string,
         data['${effectivePrefix}company_gstin_snapshot'],
       ),
+      companyLogoSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}company_logo_snapshot'],
+      ),
+      signatureAppliedSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}signature_applied_snapshot'],
+      )!,
+      signatureImageSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}signature_image_snapshot'],
+      ),
+      signatoryNameSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}signatory_name_snapshot'],
+      ),
+      signatoryDesignationSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}signatory_designation_snapshot'],
+      ),
+      signatureEligible: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}signature_eligible'],
+      )!,
       partyNameSnapshot: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}party_name_snapshot'],
@@ -4552,6 +5347,12 @@ class Invoice extends DataClass implements Insertable<Invoice> {
   final String? companyAddress3Snapshot;
   final String? companyPanSnapshot;
   final String? companyGstinSnapshot;
+  final Uint8List? companyLogoSnapshot;
+  final bool signatureAppliedSnapshot;
+  final Uint8List? signatureImageSnapshot;
+  final String? signatoryNameSnapshot;
+  final String? signatoryDesignationSnapshot;
+  final bool signatureEligible;
   final String partyNameSnapshot;
   final String? partyAddress1Snapshot;
   final String? partyAddress2Snapshot;
@@ -4594,6 +5395,12 @@ class Invoice extends DataClass implements Insertable<Invoice> {
     this.companyAddress3Snapshot,
     this.companyPanSnapshot,
     this.companyGstinSnapshot,
+    this.companyLogoSnapshot,
+    required this.signatureAppliedSnapshot,
+    this.signatureImageSnapshot,
+    this.signatoryNameSnapshot,
+    this.signatoryDesignationSnapshot,
+    required this.signatureEligible,
     required this.partyNameSnapshot,
     this.partyAddress1Snapshot,
     this.partyAddress2Snapshot,
@@ -4669,6 +5476,26 @@ class Invoice extends DataClass implements Insertable<Invoice> {
     if (!nullToAbsent || companyGstinSnapshot != null) {
       map['company_gstin_snapshot'] = Variable<String>(companyGstinSnapshot);
     }
+    if (!nullToAbsent || companyLogoSnapshot != null) {
+      map['company_logo_snapshot'] = Variable<Uint8List>(companyLogoSnapshot);
+    }
+    map['signature_applied_snapshot'] = Variable<bool>(
+      signatureAppliedSnapshot,
+    );
+    if (!nullToAbsent || signatureImageSnapshot != null) {
+      map['signature_image_snapshot'] = Variable<Uint8List>(
+        signatureImageSnapshot,
+      );
+    }
+    if (!nullToAbsent || signatoryNameSnapshot != null) {
+      map['signatory_name_snapshot'] = Variable<String>(signatoryNameSnapshot);
+    }
+    if (!nullToAbsent || signatoryDesignationSnapshot != null) {
+      map['signatory_designation_snapshot'] = Variable<String>(
+        signatoryDesignationSnapshot,
+      );
+    }
+    map['signature_eligible'] = Variable<bool>(signatureEligible);
     map['party_name_snapshot'] = Variable<String>(partyNameSnapshot);
     if (!nullToAbsent || partyAddress1Snapshot != null) {
       map['party_address1_snapshot'] = Variable<String>(partyAddress1Snapshot);
@@ -4755,6 +5582,21 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       companyGstinSnapshot: companyGstinSnapshot == null && nullToAbsent
           ? const Value.absent()
           : Value(companyGstinSnapshot),
+      companyLogoSnapshot: companyLogoSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(companyLogoSnapshot),
+      signatureAppliedSnapshot: Value(signatureAppliedSnapshot),
+      signatureImageSnapshot: signatureImageSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(signatureImageSnapshot),
+      signatoryNameSnapshot: signatoryNameSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(signatoryNameSnapshot),
+      signatoryDesignationSnapshot:
+          signatoryDesignationSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(signatoryDesignationSnapshot),
+      signatureEligible: Value(signatureEligible),
       partyNameSnapshot: Value(partyNameSnapshot),
       partyAddress1Snapshot: partyAddress1Snapshot == null && nullToAbsent
           ? const Value.absent()
@@ -4833,6 +5675,22 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       companyGstinSnapshot: serializer.fromJson<String?>(
         json['companyGstinSnapshot'],
       ),
+      companyLogoSnapshot: serializer.fromJson<Uint8List?>(
+        json['companyLogoSnapshot'],
+      ),
+      signatureAppliedSnapshot: serializer.fromJson<bool>(
+        json['signatureAppliedSnapshot'],
+      ),
+      signatureImageSnapshot: serializer.fromJson<Uint8List?>(
+        json['signatureImageSnapshot'],
+      ),
+      signatoryNameSnapshot: serializer.fromJson<String?>(
+        json['signatoryNameSnapshot'],
+      ),
+      signatoryDesignationSnapshot: serializer.fromJson<String?>(
+        json['signatoryDesignationSnapshot'],
+      ),
+      signatureEligible: serializer.fromJson<bool>(json['signatureEligible']),
       partyNameSnapshot: serializer.fromJson<String>(json['partyNameSnapshot']),
       partyAddress1Snapshot: serializer.fromJson<String?>(
         json['partyAddress1Snapshot'],
@@ -4896,6 +5754,20 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       ),
       'companyPanSnapshot': serializer.toJson<String?>(companyPanSnapshot),
       'companyGstinSnapshot': serializer.toJson<String?>(companyGstinSnapshot),
+      'companyLogoSnapshot': serializer.toJson<Uint8List?>(companyLogoSnapshot),
+      'signatureAppliedSnapshot': serializer.toJson<bool>(
+        signatureAppliedSnapshot,
+      ),
+      'signatureImageSnapshot': serializer.toJson<Uint8List?>(
+        signatureImageSnapshot,
+      ),
+      'signatoryNameSnapshot': serializer.toJson<String?>(
+        signatoryNameSnapshot,
+      ),
+      'signatoryDesignationSnapshot': serializer.toJson<String?>(
+        signatoryDesignationSnapshot,
+      ),
+      'signatureEligible': serializer.toJson<bool>(signatureEligible),
       'partyNameSnapshot': serializer.toJson<String>(partyNameSnapshot),
       'partyAddress1Snapshot': serializer.toJson<String?>(
         partyAddress1Snapshot,
@@ -4947,6 +5819,12 @@ class Invoice extends DataClass implements Insertable<Invoice> {
     Value<String?> companyAddress3Snapshot = const Value.absent(),
     Value<String?> companyPanSnapshot = const Value.absent(),
     Value<String?> companyGstinSnapshot = const Value.absent(),
+    Value<Uint8List?> companyLogoSnapshot = const Value.absent(),
+    bool? signatureAppliedSnapshot,
+    Value<Uint8List?> signatureImageSnapshot = const Value.absent(),
+    Value<String?> signatoryNameSnapshot = const Value.absent(),
+    Value<String?> signatoryDesignationSnapshot = const Value.absent(),
+    bool? signatureEligible,
     String? partyNameSnapshot,
     Value<String?> partyAddress1Snapshot = const Value.absent(),
     Value<String?> partyAddress2Snapshot = const Value.absent(),
@@ -4999,6 +5877,21 @@ class Invoice extends DataClass implements Insertable<Invoice> {
     companyGstinSnapshot: companyGstinSnapshot.present
         ? companyGstinSnapshot.value
         : this.companyGstinSnapshot,
+    companyLogoSnapshot: companyLogoSnapshot.present
+        ? companyLogoSnapshot.value
+        : this.companyLogoSnapshot,
+    signatureAppliedSnapshot:
+        signatureAppliedSnapshot ?? this.signatureAppliedSnapshot,
+    signatureImageSnapshot: signatureImageSnapshot.present
+        ? signatureImageSnapshot.value
+        : this.signatureImageSnapshot,
+    signatoryNameSnapshot: signatoryNameSnapshot.present
+        ? signatoryNameSnapshot.value
+        : this.signatoryNameSnapshot,
+    signatoryDesignationSnapshot: signatoryDesignationSnapshot.present
+        ? signatoryDesignationSnapshot.value
+        : this.signatoryDesignationSnapshot,
+    signatureEligible: signatureEligible ?? this.signatureEligible,
     partyNameSnapshot: partyNameSnapshot ?? this.partyNameSnapshot,
     partyAddress1Snapshot: partyAddress1Snapshot.present
         ? partyAddress1Snapshot.value
@@ -5081,6 +5974,24 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       companyGstinSnapshot: data.companyGstinSnapshot.present
           ? data.companyGstinSnapshot.value
           : this.companyGstinSnapshot,
+      companyLogoSnapshot: data.companyLogoSnapshot.present
+          ? data.companyLogoSnapshot.value
+          : this.companyLogoSnapshot,
+      signatureAppliedSnapshot: data.signatureAppliedSnapshot.present
+          ? data.signatureAppliedSnapshot.value
+          : this.signatureAppliedSnapshot,
+      signatureImageSnapshot: data.signatureImageSnapshot.present
+          ? data.signatureImageSnapshot.value
+          : this.signatureImageSnapshot,
+      signatoryNameSnapshot: data.signatoryNameSnapshot.present
+          ? data.signatoryNameSnapshot.value
+          : this.signatoryNameSnapshot,
+      signatoryDesignationSnapshot: data.signatoryDesignationSnapshot.present
+          ? data.signatoryDesignationSnapshot.value
+          : this.signatoryDesignationSnapshot,
+      signatureEligible: data.signatureEligible.present
+          ? data.signatureEligible.value
+          : this.signatureEligible,
       partyNameSnapshot: data.partyNameSnapshot.present
           ? data.partyNameSnapshot.value
           : this.partyNameSnapshot,
@@ -5160,6 +6071,14 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           ..write('companyAddress3Snapshot: $companyAddress3Snapshot, ')
           ..write('companyPanSnapshot: $companyPanSnapshot, ')
           ..write('companyGstinSnapshot: $companyGstinSnapshot, ')
+          ..write('companyLogoSnapshot: $companyLogoSnapshot, ')
+          ..write('signatureAppliedSnapshot: $signatureAppliedSnapshot, ')
+          ..write('signatureImageSnapshot: $signatureImageSnapshot, ')
+          ..write('signatoryNameSnapshot: $signatoryNameSnapshot, ')
+          ..write(
+            'signatoryDesignationSnapshot: $signatoryDesignationSnapshot, ',
+          )
+          ..write('signatureEligible: $signatureEligible, ')
           ..write('partyNameSnapshot: $partyNameSnapshot, ')
           ..write('partyAddress1Snapshot: $partyAddress1Snapshot, ')
           ..write('partyAddress2Snapshot: $partyAddress2Snapshot, ')
@@ -5207,6 +6126,12 @@ class Invoice extends DataClass implements Insertable<Invoice> {
     companyAddress3Snapshot,
     companyPanSnapshot,
     companyGstinSnapshot,
+    $driftBlobEquality.hash(companyLogoSnapshot),
+    signatureAppliedSnapshot,
+    $driftBlobEquality.hash(signatureImageSnapshot),
+    signatoryNameSnapshot,
+    signatoryDesignationSnapshot,
+    signatureEligible,
     partyNameSnapshot,
     partyAddress1Snapshot,
     partyAddress2Snapshot,
@@ -5253,6 +6178,19 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           other.companyAddress3Snapshot == this.companyAddress3Snapshot &&
           other.companyPanSnapshot == this.companyPanSnapshot &&
           other.companyGstinSnapshot == this.companyGstinSnapshot &&
+          $driftBlobEquality.equals(
+            other.companyLogoSnapshot,
+            this.companyLogoSnapshot,
+          ) &&
+          other.signatureAppliedSnapshot == this.signatureAppliedSnapshot &&
+          $driftBlobEquality.equals(
+            other.signatureImageSnapshot,
+            this.signatureImageSnapshot,
+          ) &&
+          other.signatoryNameSnapshot == this.signatoryNameSnapshot &&
+          other.signatoryDesignationSnapshot ==
+              this.signatoryDesignationSnapshot &&
+          other.signatureEligible == this.signatureEligible &&
           other.partyNameSnapshot == this.partyNameSnapshot &&
           other.partyAddress1Snapshot == this.partyAddress1Snapshot &&
           other.partyAddress2Snapshot == this.partyAddress2Snapshot &&
@@ -5297,6 +6235,12 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
   final Value<String?> companyAddress3Snapshot;
   final Value<String?> companyPanSnapshot;
   final Value<String?> companyGstinSnapshot;
+  final Value<Uint8List?> companyLogoSnapshot;
+  final Value<bool> signatureAppliedSnapshot;
+  final Value<Uint8List?> signatureImageSnapshot;
+  final Value<String?> signatoryNameSnapshot;
+  final Value<String?> signatoryDesignationSnapshot;
+  final Value<bool> signatureEligible;
   final Value<String> partyNameSnapshot;
   final Value<String?> partyAddress1Snapshot;
   final Value<String?> partyAddress2Snapshot;
@@ -5340,6 +6284,12 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     this.companyAddress3Snapshot = const Value.absent(),
     this.companyPanSnapshot = const Value.absent(),
     this.companyGstinSnapshot = const Value.absent(),
+    this.companyLogoSnapshot = const Value.absent(),
+    this.signatureAppliedSnapshot = const Value.absent(),
+    this.signatureImageSnapshot = const Value.absent(),
+    this.signatoryNameSnapshot = const Value.absent(),
+    this.signatoryDesignationSnapshot = const Value.absent(),
+    this.signatureEligible = const Value.absent(),
     this.partyNameSnapshot = const Value.absent(),
     this.partyAddress1Snapshot = const Value.absent(),
     this.partyAddress2Snapshot = const Value.absent(),
@@ -5384,6 +6334,12 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     this.companyAddress3Snapshot = const Value.absent(),
     this.companyPanSnapshot = const Value.absent(),
     this.companyGstinSnapshot = const Value.absent(),
+    this.companyLogoSnapshot = const Value.absent(),
+    this.signatureAppliedSnapshot = const Value.absent(),
+    this.signatureImageSnapshot = const Value.absent(),
+    this.signatoryNameSnapshot = const Value.absent(),
+    this.signatoryDesignationSnapshot = const Value.absent(),
+    this.signatureEligible = const Value.absent(),
     required String partyNameSnapshot,
     this.partyAddress1Snapshot = const Value.absent(),
     this.partyAddress2Snapshot = const Value.absent(),
@@ -5432,6 +6388,12 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     Expression<String>? companyAddress3Snapshot,
     Expression<String>? companyPanSnapshot,
     Expression<String>? companyGstinSnapshot,
+    Expression<Uint8List>? companyLogoSnapshot,
+    Expression<bool>? signatureAppliedSnapshot,
+    Expression<Uint8List>? signatureImageSnapshot,
+    Expression<String>? signatoryNameSnapshot,
+    Expression<String>? signatoryDesignationSnapshot,
+    Expression<bool>? signatureEligible,
     Expression<String>? partyNameSnapshot,
     Expression<String>? partyAddress1Snapshot,
     Expression<String>? partyAddress2Snapshot,
@@ -5482,6 +6444,17 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
         'company_pan_snapshot': companyPanSnapshot,
       if (companyGstinSnapshot != null)
         'company_gstin_snapshot': companyGstinSnapshot,
+      if (companyLogoSnapshot != null)
+        'company_logo_snapshot': companyLogoSnapshot,
+      if (signatureAppliedSnapshot != null)
+        'signature_applied_snapshot': signatureAppliedSnapshot,
+      if (signatureImageSnapshot != null)
+        'signature_image_snapshot': signatureImageSnapshot,
+      if (signatoryNameSnapshot != null)
+        'signatory_name_snapshot': signatoryNameSnapshot,
+      if (signatoryDesignationSnapshot != null)
+        'signatory_designation_snapshot': signatoryDesignationSnapshot,
+      if (signatureEligible != null) 'signature_eligible': signatureEligible,
       if (partyNameSnapshot != null) 'party_name_snapshot': partyNameSnapshot,
       if (partyAddress1Snapshot != null)
         'party_address1_snapshot': partyAddress1Snapshot,
@@ -5534,6 +6507,12 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     Value<String?>? companyAddress3Snapshot,
     Value<String?>? companyPanSnapshot,
     Value<String?>? companyGstinSnapshot,
+    Value<Uint8List?>? companyLogoSnapshot,
+    Value<bool>? signatureAppliedSnapshot,
+    Value<Uint8List?>? signatureImageSnapshot,
+    Value<String?>? signatoryNameSnapshot,
+    Value<String?>? signatoryDesignationSnapshot,
+    Value<bool>? signatureEligible,
     Value<String>? partyNameSnapshot,
     Value<String?>? partyAddress1Snapshot,
     Value<String?>? partyAddress2Snapshot,
@@ -5581,6 +6560,16 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
           companyAddress3Snapshot ?? this.companyAddress3Snapshot,
       companyPanSnapshot: companyPanSnapshot ?? this.companyPanSnapshot,
       companyGstinSnapshot: companyGstinSnapshot ?? this.companyGstinSnapshot,
+      companyLogoSnapshot: companyLogoSnapshot ?? this.companyLogoSnapshot,
+      signatureAppliedSnapshot:
+          signatureAppliedSnapshot ?? this.signatureAppliedSnapshot,
+      signatureImageSnapshot:
+          signatureImageSnapshot ?? this.signatureImageSnapshot,
+      signatoryNameSnapshot:
+          signatoryNameSnapshot ?? this.signatoryNameSnapshot,
+      signatoryDesignationSnapshot:
+          signatoryDesignationSnapshot ?? this.signatoryDesignationSnapshot,
+      signatureEligible: signatureEligible ?? this.signatureEligible,
       partyNameSnapshot: partyNameSnapshot ?? this.partyNameSnapshot,
       partyAddress1Snapshot:
           partyAddress1Snapshot ?? this.partyAddress1Snapshot,
@@ -5675,6 +6664,34 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       map['company_gstin_snapshot'] = Variable<String>(
         companyGstinSnapshot.value,
       );
+    }
+    if (companyLogoSnapshot.present) {
+      map['company_logo_snapshot'] = Variable<Uint8List>(
+        companyLogoSnapshot.value,
+      );
+    }
+    if (signatureAppliedSnapshot.present) {
+      map['signature_applied_snapshot'] = Variable<bool>(
+        signatureAppliedSnapshot.value,
+      );
+    }
+    if (signatureImageSnapshot.present) {
+      map['signature_image_snapshot'] = Variable<Uint8List>(
+        signatureImageSnapshot.value,
+      );
+    }
+    if (signatoryNameSnapshot.present) {
+      map['signatory_name_snapshot'] = Variable<String>(
+        signatoryNameSnapshot.value,
+      );
+    }
+    if (signatoryDesignationSnapshot.present) {
+      map['signatory_designation_snapshot'] = Variable<String>(
+        signatoryDesignationSnapshot.value,
+      );
+    }
+    if (signatureEligible.present) {
+      map['signature_eligible'] = Variable<bool>(signatureEligible.value);
     }
     if (partyNameSnapshot.present) {
       map['party_name_snapshot'] = Variable<String>(partyNameSnapshot.value);
@@ -5780,6 +6797,14 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
           ..write('companyAddress3Snapshot: $companyAddress3Snapshot, ')
           ..write('companyPanSnapshot: $companyPanSnapshot, ')
           ..write('companyGstinSnapshot: $companyGstinSnapshot, ')
+          ..write('companyLogoSnapshot: $companyLogoSnapshot, ')
+          ..write('signatureAppliedSnapshot: $signatureAppliedSnapshot, ')
+          ..write('signatureImageSnapshot: $signatureImageSnapshot, ')
+          ..write('signatoryNameSnapshot: $signatoryNameSnapshot, ')
+          ..write(
+            'signatoryDesignationSnapshot: $signatoryDesignationSnapshot, ',
+          )
+          ..write('signatureEligible: $signatureEligible, ')
           ..write('partyNameSnapshot: $partyNameSnapshot, ')
           ..write('partyAddress1Snapshot: $partyAddress1Snapshot, ')
           ..write('partyAddress2Snapshot: $partyAddress2Snapshot, ')
@@ -9121,7 +10146,21 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
+        'parties',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('vendor_codes', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
         'companies',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('sites', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'parties',
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('sites', kind: UpdateKind.delete)],
@@ -9208,6 +10247,15 @@ typedef $$CompaniesTableCreateCompanionBuilder =
       Value<String?> phone,
       Value<String?> email,
       Value<String?> logoPath,
+      Value<Uint8List?> logoImage,
+      Value<String> invoiceNumberMode,
+      Value<String?> customInvoicePrefix,
+      Value<String?> customInvoiceSeries,
+      Value<bool> applySignature,
+      Value<bool> applySignatureToHistorical,
+      Value<Uint8List?> signatureImage,
+      Value<String?> signatoryName,
+      Value<String?> signatoryDesignation,
       Value<bool> isActive,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -9229,6 +10277,15 @@ typedef $$CompaniesTableUpdateCompanionBuilder =
       Value<String?> phone,
       Value<String?> email,
       Value<String?> logoPath,
+      Value<Uint8List?> logoImage,
+      Value<String> invoiceNumberMode,
+      Value<String?> customInvoicePrefix,
+      Value<String?> customInvoiceSeries,
+      Value<bool> applySignature,
+      Value<bool> applySignatureToHistorical,
+      Value<Uint8List?> signatureImage,
+      Value<String?> signatoryName,
+      Value<String?> signatoryDesignation,
       Value<bool> isActive,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -9447,6 +10504,51 @@ class $$CompaniesTableFilterComposer
 
   ColumnFilters<String> get logoPath => $composableBuilder(
     column: $table.logoPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get logoImage => $composableBuilder(
+    column: $table.logoImage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get invoiceNumberMode => $composableBuilder(
+    column: $table.invoiceNumberMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customInvoicePrefix => $composableBuilder(
+    column: $table.customInvoicePrefix,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customInvoiceSeries => $composableBuilder(
+    column: $table.customInvoiceSeries,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get applySignature => $composableBuilder(
+    column: $table.applySignature,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get applySignatureToHistorical => $composableBuilder(
+    column: $table.applySignatureToHistorical,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get signatureImage => $composableBuilder(
+    column: $table.signatureImage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get signatoryName => $composableBuilder(
+    column: $table.signatoryName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get signatoryDesignation => $composableBuilder(
+    column: $table.signatoryDesignation,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9720,6 +10822,51 @@ class $$CompaniesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get logoImage => $composableBuilder(
+    column: $table.logoImage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get invoiceNumberMode => $composableBuilder(
+    column: $table.invoiceNumberMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customInvoicePrefix => $composableBuilder(
+    column: $table.customInvoicePrefix,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customInvoiceSeries => $composableBuilder(
+    column: $table.customInvoiceSeries,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get applySignature => $composableBuilder(
+    column: $table.applySignature,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get applySignatureToHistorical => $composableBuilder(
+    column: $table.applySignatureToHistorical,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get signatureImage => $composableBuilder(
+    column: $table.signatureImage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get signatoryName => $composableBuilder(
+    column: $table.signatoryName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get signatoryDesignation => $composableBuilder(
+    column: $table.signatoryDesignation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isActive => $composableBuilder(
     column: $table.isActive,
     builder: (column) => ColumnOrderings(column),
@@ -9790,6 +10937,49 @@ class $$CompaniesTableAnnotationComposer
 
   GeneratedColumn<String> get logoPath =>
       $composableBuilder(column: $table.logoPath, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get logoImage =>
+      $composableBuilder(column: $table.logoImage, builder: (column) => column);
+
+  GeneratedColumn<String> get invoiceNumberMode => $composableBuilder(
+    column: $table.invoiceNumberMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get customInvoicePrefix => $composableBuilder(
+    column: $table.customInvoicePrefix,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get customInvoiceSeries => $composableBuilder(
+    column: $table.customInvoiceSeries,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get applySignature => $composableBuilder(
+    column: $table.applySignature,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get applySignatureToHistorical => $composableBuilder(
+    column: $table.applySignatureToHistorical,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<Uint8List> get signatureImage => $composableBuilder(
+    column: $table.signatureImage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get signatoryName => $composableBuilder(
+    column: $table.signatoryName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get signatoryDesignation => $composableBuilder(
+    column: $table.signatoryDesignation,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
@@ -10026,6 +11216,15 @@ class $$CompaniesTableTableManager
                 Value<String?> phone = const Value.absent(),
                 Value<String?> email = const Value.absent(),
                 Value<String?> logoPath = const Value.absent(),
+                Value<Uint8List?> logoImage = const Value.absent(),
+                Value<String> invoiceNumberMode = const Value.absent(),
+                Value<String?> customInvoicePrefix = const Value.absent(),
+                Value<String?> customInvoiceSeries = const Value.absent(),
+                Value<bool> applySignature = const Value.absent(),
+                Value<bool> applySignatureToHistorical = const Value.absent(),
+                Value<Uint8List?> signatureImage = const Value.absent(),
+                Value<String?> signatoryName = const Value.absent(),
+                Value<String?> signatoryDesignation = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -10045,6 +11244,15 @@ class $$CompaniesTableTableManager
                 phone: phone,
                 email: email,
                 logoPath: logoPath,
+                logoImage: logoImage,
+                invoiceNumberMode: invoiceNumberMode,
+                customInvoicePrefix: customInvoicePrefix,
+                customInvoiceSeries: customInvoiceSeries,
+                applySignature: applySignature,
+                applySignatureToHistorical: applySignatureToHistorical,
+                signatureImage: signatureImage,
+                signatoryName: signatoryName,
+                signatoryDesignation: signatoryDesignation,
                 isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -10066,6 +11274,15 @@ class $$CompaniesTableTableManager
                 Value<String?> phone = const Value.absent(),
                 Value<String?> email = const Value.absent(),
                 Value<String?> logoPath = const Value.absent(),
+                Value<Uint8List?> logoImage = const Value.absent(),
+                Value<String> invoiceNumberMode = const Value.absent(),
+                Value<String?> customInvoicePrefix = const Value.absent(),
+                Value<String?> customInvoiceSeries = const Value.absent(),
+                Value<bool> applySignature = const Value.absent(),
+                Value<bool> applySignatureToHistorical = const Value.absent(),
+                Value<Uint8List?> signatureImage = const Value.absent(),
+                Value<String?> signatoryName = const Value.absent(),
+                Value<String?> signatoryDesignation = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -10085,6 +11302,15 @@ class $$CompaniesTableTableManager
                 phone: phone,
                 email: email,
                 logoPath: logoPath,
+                logoImage: logoImage,
+                invoiceNumberMode: invoiceNumberMode,
+                customInvoicePrefix: customInvoicePrefix,
+                customInvoiceSeries: customInvoiceSeries,
+                applySignature: applySignature,
+                applySignatureToHistorical: applySignatureToHistorical,
+                signatureImage: signatureImage,
+                signatoryName: signatoryName,
+                signatoryDesignation: signatoryDesignation,
                 isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -10361,6 +11587,43 @@ final class $$PartiesTableReferences
     );
   }
 
+  static MultiTypedResultKey<$VendorCodesTable, List<VendorCode>>
+  _vendorCodesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.vendorCodes,
+    aliasName: 'parties__id__vendor_codes__party_id',
+  );
+
+  $$VendorCodesTableProcessedTableManager get vendorCodesRefs {
+    final manager = $$VendorCodesTableTableManager(
+      $_db,
+      $_db.vendorCodes,
+    ).filter((f) => f.partyId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_vendorCodesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$SitesTable, List<Site>> _sitesRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.sites,
+    aliasName: 'parties__id__sites__party_id',
+  );
+
+  $$SitesTableProcessedTableManager get sitesRefs {
+    final manager = $$SitesTableTableManager(
+      $_db,
+      $_db.sites,
+    ).filter((f) => f.partyId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_sitesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$InvoicesTable, List<Invoice>> _invoicesRefsTable(
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
@@ -10486,6 +11749,56 @@ class $$PartiesTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> vendorCodesRefs(
+    Expression<bool> Function($$VendorCodesTableFilterComposer f) f,
+  ) {
+    final $$VendorCodesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.vendorCodes,
+      getReferencedColumn: (t) => t.partyId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$VendorCodesTableFilterComposer(
+            $db: $db,
+            $table: $db.vendorCodes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> sitesRefs(
+    Expression<bool> Function($$SitesTableFilterComposer f) f,
+  ) {
+    final $$SitesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.sites,
+      getReferencedColumn: (t) => t.partyId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SitesTableFilterComposer(
+            $db: $db,
+            $table: $db.sites,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 
   Expression<bool> invoicesRefs(
@@ -10699,6 +12012,56 @@ class $$PartiesTableAnnotationComposer
     return composer;
   }
 
+  Expression<T> vendorCodesRefs<T extends Object>(
+    Expression<T> Function($$VendorCodesTableAnnotationComposer a) f,
+  ) {
+    final $$VendorCodesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.vendorCodes,
+      getReferencedColumn: (t) => t.partyId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$VendorCodesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.vendorCodes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> sitesRefs<T extends Object>(
+    Expression<T> Function($$SitesTableAnnotationComposer a) f,
+  ) {
+    final $$SitesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.sites,
+      getReferencedColumn: (t) => t.partyId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SitesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sites,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> invoicesRefs<T extends Object>(
     Expression<T> Function($$InvoicesTableAnnotationComposer a) f,
   ) {
@@ -10738,7 +12101,12 @@ class $$PartiesTableTableManager
           $$PartiesTableUpdateCompanionBuilder,
           (Party, $$PartiesTableReferences),
           Party,
-          PrefetchHooks Function({bool companyId, bool invoicesRefs})
+          PrefetchHooks Function({
+            bool companyId,
+            bool vendorCodesRefs,
+            bool sitesRefs,
+            bool invoicesRefs,
+          })
         > {
   $$PartiesTableTableManager(_$AppDatabase db, $PartiesTable table)
     : super(
@@ -10835,59 +12203,113 @@ class $$PartiesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({companyId = false, invoicesRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (invoicesRefs) db.invoices],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (companyId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.companyId,
-                                referencedTable: $$PartiesTableReferences
-                                    ._companyIdTable(db),
-                                referencedColumn: $$PartiesTableReferences
-                                    ._companyIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({
+                companyId = false,
+                vendorCodesRefs = false,
+                sitesRefs = false,
+                invoicesRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (vendorCodesRefs) db.vendorCodes,
+                    if (sitesRefs) db.sites,
+                    if (invoicesRefs) db.invoices,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (companyId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.companyId,
+                                    referencedTable: $$PartiesTableReferences
+                                        ._companyIdTable(db),
+                                    referencedColumn: $$PartiesTableReferences
+                                        ._companyIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (vendorCodesRefs)
+                        await $_getPrefetchedData<
+                          Party,
+                          $PartiesTable,
+                          VendorCode
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PartiesTableReferences
+                              ._vendorCodesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PartiesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).vendorCodesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.partyId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (sitesRefs)
+                        await $_getPrefetchedData<Party, $PartiesTable, Site>(
+                          currentTable: table,
+                          referencedTable: $$PartiesTableReferences
+                              ._sitesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PartiesTableReferences(db, table, p0).sitesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.partyId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (invoicesRefs)
+                        await $_getPrefetchedData<
+                          Party,
+                          $PartiesTable,
+                          Invoice
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PartiesTableReferences
+                              ._invoicesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PartiesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).invoicesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.partyId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (invoicesRefs)
-                    await $_getPrefetchedData<Party, $PartiesTable, Invoice>(
-                      currentTable: table,
-                      referencedTable: $$PartiesTableReferences
-                          ._invoicesRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$PartiesTableReferences(db, table, p0).invoicesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.partyId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -10904,12 +12326,18 @@ typedef $$PartiesTableProcessedTableManager =
       $$PartiesTableUpdateCompanionBuilder,
       (Party, $$PartiesTableReferences),
       Party,
-      PrefetchHooks Function({bool companyId, bool invoicesRefs})
+      PrefetchHooks Function({
+        bool companyId,
+        bool vendorCodesRefs,
+        bool sitesRefs,
+        bool invoicesRefs,
+      })
     >;
 typedef $$VendorCodesTableCreateCompanionBuilder =
     VendorCodesCompanion Function({
       Value<String> id,
       required String companyId,
+      Value<String?> partyId,
       required String vendorCode,
       Value<String?> description,
       Value<bool> isActive,
@@ -10920,6 +12348,7 @@ typedef $$VendorCodesTableUpdateCompanionBuilder =
     VendorCodesCompanion Function({
       Value<String> id,
       Value<String> companyId,
+      Value<String?> partyId,
       Value<String> vendorCode,
       Value<String?> description,
       Value<bool> isActive,
@@ -10942,6 +12371,23 @@ final class $$VendorCodesTableReferences
       $_db.companies,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_companyIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $PartiesTable _partyIdTable(_$AppDatabase db) =>
+      db.parties.createAlias('vendor_codes__party_id__parties__id');
+
+  $$PartiesTableProcessedTableManager? get partyId {
+    final $_column = $_itemColumn<String>('party_id');
+    if ($_column == null) return null;
+    final manager = $$PartiesTableTableManager(
+      $_db,
+      $_db.parties,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_partyIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -11016,6 +12462,29 @@ class $$VendorCodesTableFilterComposer
           }) => $$CompaniesTableFilterComposer(
             $db: $db,
             $table: $db.companies,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PartiesTableFilterComposer get partyId {
+    final $$PartiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.partyId,
+      referencedTable: $db.parties,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartiesTableFilterComposer(
+            $db: $db,
+            $table: $db.parties,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -11107,6 +12576,29 @@ class $$VendorCodesTableOrderingComposer
     );
     return composer;
   }
+
+  $$PartiesTableOrderingComposer get partyId {
+    final $$PartiesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.partyId,
+      referencedTable: $db.parties,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartiesTableOrderingComposer(
+            $db: $db,
+            $table: $db.parties,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$VendorCodesTableAnnotationComposer
@@ -11160,6 +12652,29 @@ class $$VendorCodesTableAnnotationComposer
     return composer;
   }
 
+  $$PartiesTableAnnotationComposer get partyId {
+    final $$PartiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.partyId,
+      referencedTable: $db.parties,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.parties,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   Expression<T> invoicesRefs<T extends Object>(
     Expression<T> Function($$InvoicesTableAnnotationComposer a) f,
   ) {
@@ -11199,7 +12714,11 @@ class $$VendorCodesTableTableManager
           $$VendorCodesTableUpdateCompanionBuilder,
           (VendorCode, $$VendorCodesTableReferences),
           VendorCode,
-          PrefetchHooks Function({bool companyId, bool invoicesRefs})
+          PrefetchHooks Function({
+            bool companyId,
+            bool partyId,
+            bool invoicesRefs,
+          })
         > {
   $$VendorCodesTableTableManager(_$AppDatabase db, $VendorCodesTable table)
     : super(
@@ -11216,6 +12735,7 @@ class $$VendorCodesTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> companyId = const Value.absent(),
+                Value<String?> partyId = const Value.absent(),
                 Value<String> vendorCode = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
@@ -11224,6 +12744,7 @@ class $$VendorCodesTableTableManager
               }) => VendorCodesCompanion(
                 id: id,
                 companyId: companyId,
+                partyId: partyId,
                 vendorCode: vendorCode,
                 description: description,
                 isActive: isActive,
@@ -11234,6 +12755,7 @@ class $$VendorCodesTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 required String companyId,
+                Value<String?> partyId = const Value.absent(),
                 required String vendorCode,
                 Value<String?> description = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
@@ -11242,6 +12764,7 @@ class $$VendorCodesTableTableManager
               }) => VendorCodesCompanion.insert(
                 id: id,
                 companyId: companyId,
+                partyId: partyId,
                 vendorCode: vendorCode,
                 description: description,
                 isActive: isActive,
@@ -11256,69 +12779,87 @@ class $$VendorCodesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({companyId = false, invoicesRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (invoicesRefs) db.invoices],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (companyId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.companyId,
-                                referencedTable: $$VendorCodesTableReferences
-                                    ._companyIdTable(db),
-                                referencedColumn: $$VendorCodesTableReferences
-                                    ._companyIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({companyId = false, partyId = false, invoicesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [if (invoicesRefs) db.invoices],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (companyId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.companyId,
+                                    referencedTable:
+                                        $$VendorCodesTableReferences
+                                            ._companyIdTable(db),
+                                    referencedColumn:
+                                        $$VendorCodesTableReferences
+                                            ._companyIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (partyId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.partyId,
+                                    referencedTable:
+                                        $$VendorCodesTableReferences
+                                            ._partyIdTable(db),
+                                    referencedColumn:
+                                        $$VendorCodesTableReferences
+                                            ._partyIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (invoicesRefs)
+                        await $_getPrefetchedData<
+                          VendorCode,
+                          $VendorCodesTable,
+                          Invoice
+                        >(
+                          currentTable: table,
+                          referencedTable: $$VendorCodesTableReferences
+                              ._invoicesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$VendorCodesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).invoicesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.vendorCodeId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (invoicesRefs)
-                    await $_getPrefetchedData<
-                      VendorCode,
-                      $VendorCodesTable,
-                      Invoice
-                    >(
-                      currentTable: table,
-                      referencedTable: $$VendorCodesTableReferences
-                          ._invoicesRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$VendorCodesTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).invoicesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where(
-                            (e) => e.vendorCodeId == item.id,
-                          ),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -11335,12 +12876,13 @@ typedef $$VendorCodesTableProcessedTableManager =
       $$VendorCodesTableUpdateCompanionBuilder,
       (VendorCode, $$VendorCodesTableReferences),
       VendorCode,
-      PrefetchHooks Function({bool companyId, bool invoicesRefs})
+      PrefetchHooks Function({bool companyId, bool partyId, bool invoicesRefs})
     >;
 typedef $$SitesTableCreateCompanionBuilder =
     SitesCompanion Function({
       Value<String> id,
       required String companyId,
+      Value<String?> partyId,
       required String siteName,
       Value<String?> siteCode,
       Value<bool> isActive,
@@ -11351,6 +12893,7 @@ typedef $$SitesTableUpdateCompanionBuilder =
     SitesCompanion Function({
       Value<String> id,
       Value<String> companyId,
+      Value<String?> partyId,
       Value<String> siteName,
       Value<String?> siteCode,
       Value<bool> isActive,
@@ -11373,6 +12916,23 @@ final class $$SitesTableReferences
       $_db.companies,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_companyIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $PartiesTable _partyIdTable(_$AppDatabase db) =>
+      db.parties.createAlias('sites__party_id__parties__id');
+
+  $$PartiesTableProcessedTableManager? get partyId {
+    final $_column = $_itemColumn<String>('party_id');
+    if ($_column == null) return null;
+    final manager = $$PartiesTableTableManager(
+      $_db,
+      $_db.parties,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_partyIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -11446,6 +13006,29 @@ class $$SitesTableFilterComposer extends Composer<_$AppDatabase, $SitesTable> {
           }) => $$CompaniesTableFilterComposer(
             $db: $db,
             $table: $db.companies,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PartiesTableFilterComposer get partyId {
+    final $$PartiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.partyId,
+      referencedTable: $db.parties,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartiesTableFilterComposer(
+            $db: $db,
+            $table: $db.parties,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -11537,6 +13120,29 @@ class $$SitesTableOrderingComposer
     );
     return composer;
   }
+
+  $$PartiesTableOrderingComposer get partyId {
+    final $$PartiesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.partyId,
+      referencedTable: $db.parties,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartiesTableOrderingComposer(
+            $db: $db,
+            $table: $db.parties,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$SitesTableAnnotationComposer
@@ -11586,6 +13192,29 @@ class $$SitesTableAnnotationComposer
     return composer;
   }
 
+  $$PartiesTableAnnotationComposer get partyId {
+    final $$PartiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.partyId,
+      referencedTable: $db.parties,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.parties,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   Expression<T> invoicesRefs<T extends Object>(
     Expression<T> Function($$InvoicesTableAnnotationComposer a) f,
   ) {
@@ -11625,7 +13254,11 @@ class $$SitesTableTableManager
           $$SitesTableUpdateCompanionBuilder,
           (Site, $$SitesTableReferences),
           Site,
-          PrefetchHooks Function({bool companyId, bool invoicesRefs})
+          PrefetchHooks Function({
+            bool companyId,
+            bool partyId,
+            bool invoicesRefs,
+          })
         > {
   $$SitesTableTableManager(_$AppDatabase db, $SitesTable table)
     : super(
@@ -11642,6 +13275,7 @@ class $$SitesTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> companyId = const Value.absent(),
+                Value<String?> partyId = const Value.absent(),
                 Value<String> siteName = const Value.absent(),
                 Value<String?> siteCode = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
@@ -11650,6 +13284,7 @@ class $$SitesTableTableManager
               }) => SitesCompanion(
                 id: id,
                 companyId: companyId,
+                partyId: partyId,
                 siteName: siteName,
                 siteCode: siteCode,
                 isActive: isActive,
@@ -11660,6 +13295,7 @@ class $$SitesTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 required String companyId,
+                Value<String?> partyId = const Value.absent(),
                 required String siteName,
                 Value<String?> siteCode = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
@@ -11668,6 +13304,7 @@ class $$SitesTableTableManager
               }) => SitesCompanion.insert(
                 id: id,
                 companyId: companyId,
+                partyId: partyId,
                 siteName: siteName,
                 siteCode: siteCode,
                 isActive: isActive,
@@ -11680,59 +13317,79 @@ class $$SitesTableTableManager
                     (e.readTable(table), $$SitesTableReferences(db, table, e)),
               )
               .toList(),
-          prefetchHooksCallback: ({companyId = false, invoicesRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (invoicesRefs) db.invoices],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (companyId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.companyId,
-                                referencedTable: $$SitesTableReferences
-                                    ._companyIdTable(db),
-                                referencedColumn: $$SitesTableReferences
-                                    ._companyIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({companyId = false, partyId = false, invoicesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [if (invoicesRefs) db.invoices],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (companyId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.companyId,
+                                    referencedTable: $$SitesTableReferences
+                                        ._companyIdTable(db),
+                                    referencedColumn: $$SitesTableReferences
+                                        ._companyIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (partyId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.partyId,
+                                    referencedTable: $$SitesTableReferences
+                                        ._partyIdTable(db),
+                                    referencedColumn: $$SitesTableReferences
+                                        ._partyIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (invoicesRefs)
+                        await $_getPrefetchedData<Site, $SitesTable, Invoice>(
+                          currentTable: table,
+                          referencedTable: $$SitesTableReferences
+                              ._invoicesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SitesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).invoicesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.siteId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (invoicesRefs)
-                    await $_getPrefetchedData<Site, $SitesTable, Invoice>(
-                      currentTable: table,
-                      referencedTable: $$SitesTableReferences
-                          ._invoicesRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$SitesTableReferences(db, table, p0).invoicesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.siteId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -11749,7 +13406,7 @@ typedef $$SitesTableProcessedTableManager =
       $$SitesTableUpdateCompanionBuilder,
       (Site, $$SitesTableReferences),
       Site,
-      PrefetchHooks Function({bool companyId, bool invoicesRefs})
+      PrefetchHooks Function({bool companyId, bool partyId, bool invoicesRefs})
     >;
 typedef $$UnitsTableCreateCompanionBuilder =
     UnitsCompanion Function({
@@ -12297,6 +13954,12 @@ typedef $$InvoicesTableCreateCompanionBuilder =
       Value<String?> companyAddress3Snapshot,
       Value<String?> companyPanSnapshot,
       Value<String?> companyGstinSnapshot,
+      Value<Uint8List?> companyLogoSnapshot,
+      Value<bool> signatureAppliedSnapshot,
+      Value<Uint8List?> signatureImageSnapshot,
+      Value<String?> signatoryNameSnapshot,
+      Value<String?> signatoryDesignationSnapshot,
+      Value<bool> signatureEligible,
       required String partyNameSnapshot,
       Value<String?> partyAddress1Snapshot,
       Value<String?> partyAddress2Snapshot,
@@ -12342,6 +14005,12 @@ typedef $$InvoicesTableUpdateCompanionBuilder =
       Value<String?> companyAddress3Snapshot,
       Value<String?> companyPanSnapshot,
       Value<String?> companyGstinSnapshot,
+      Value<Uint8List?> companyLogoSnapshot,
+      Value<bool> signatureAppliedSnapshot,
+      Value<Uint8List?> signatureImageSnapshot,
+      Value<String?> signatoryNameSnapshot,
+      Value<String?> signatoryDesignationSnapshot,
+      Value<bool> signatureEligible,
       Value<String> partyNameSnapshot,
       Value<String?> partyAddress1Snapshot,
       Value<String?> partyAddress2Snapshot,
@@ -12550,6 +14219,36 @@ class $$InvoicesTableFilterComposer
 
   ColumnFilters<String> get companyGstinSnapshot => $composableBuilder(
     column: $table.companyGstinSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get companyLogoSnapshot => $composableBuilder(
+    column: $table.companyLogoSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get signatureAppliedSnapshot => $composableBuilder(
+    column: $table.signatureAppliedSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get signatureImageSnapshot => $composableBuilder(
+    column: $table.signatureImageSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get signatoryNameSnapshot => $composableBuilder(
+    column: $table.signatoryNameSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get signatoryDesignationSnapshot => $composableBuilder(
+    column: $table.signatoryDesignationSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get signatureEligible => $composableBuilder(
+    column: $table.signatureEligible,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12890,6 +14589,37 @@ class $$InvoicesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get companyLogoSnapshot => $composableBuilder(
+    column: $table.companyLogoSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get signatureAppliedSnapshot => $composableBuilder(
+    column: $table.signatureAppliedSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get signatureImageSnapshot => $composableBuilder(
+    column: $table.signatureImageSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get signatoryNameSnapshot => $composableBuilder(
+    column: $table.signatoryNameSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get signatoryDesignationSnapshot =>
+      $composableBuilder(
+        column: $table.signatoryDesignationSnapshot,
+        builder: (column) => ColumnOrderings(column),
+      );
+
+  ColumnOrderings<bool> get signatureEligible => $composableBuilder(
+    column: $table.signatureEligible,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get partyNameSnapshot => $composableBuilder(
     column: $table.partyNameSnapshot,
     builder: (column) => ColumnOrderings(column),
@@ -13168,6 +14898,37 @@ class $$InvoicesTableAnnotationComposer
 
   GeneratedColumn<String> get companyGstinSnapshot => $composableBuilder(
     column: $table.companyGstinSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<Uint8List> get companyLogoSnapshot => $composableBuilder(
+    column: $table.companyLogoSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get signatureAppliedSnapshot => $composableBuilder(
+    column: $table.signatureAppliedSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<Uint8List> get signatureImageSnapshot => $composableBuilder(
+    column: $table.signatureImageSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get signatoryNameSnapshot => $composableBuilder(
+    column: $table.signatoryNameSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get signatoryDesignationSnapshot =>
+      $composableBuilder(
+        column: $table.signatoryDesignationSnapshot,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<bool> get signatureEligible => $composableBuilder(
+    column: $table.signatureEligible,
     builder: (column) => column,
   );
 
@@ -13470,6 +15231,13 @@ class $$InvoicesTableTableManager
                 Value<String?> companyAddress3Snapshot = const Value.absent(),
                 Value<String?> companyPanSnapshot = const Value.absent(),
                 Value<String?> companyGstinSnapshot = const Value.absent(),
+                Value<Uint8List?> companyLogoSnapshot = const Value.absent(),
+                Value<bool> signatureAppliedSnapshot = const Value.absent(),
+                Value<Uint8List?> signatureImageSnapshot = const Value.absent(),
+                Value<String?> signatoryNameSnapshot = const Value.absent(),
+                Value<String?> signatoryDesignationSnapshot =
+                    const Value.absent(),
+                Value<bool> signatureEligible = const Value.absent(),
                 Value<String> partyNameSnapshot = const Value.absent(),
                 Value<String?> partyAddress1Snapshot = const Value.absent(),
                 Value<String?> partyAddress2Snapshot = const Value.absent(),
@@ -13513,6 +15281,12 @@ class $$InvoicesTableTableManager
                 companyAddress3Snapshot: companyAddress3Snapshot,
                 companyPanSnapshot: companyPanSnapshot,
                 companyGstinSnapshot: companyGstinSnapshot,
+                companyLogoSnapshot: companyLogoSnapshot,
+                signatureAppliedSnapshot: signatureAppliedSnapshot,
+                signatureImageSnapshot: signatureImageSnapshot,
+                signatoryNameSnapshot: signatoryNameSnapshot,
+                signatoryDesignationSnapshot: signatoryDesignationSnapshot,
+                signatureEligible: signatureEligible,
                 partyNameSnapshot: partyNameSnapshot,
                 partyAddress1Snapshot: partyAddress1Snapshot,
                 partyAddress2Snapshot: partyAddress2Snapshot,
@@ -13558,6 +15332,13 @@ class $$InvoicesTableTableManager
                 Value<String?> companyAddress3Snapshot = const Value.absent(),
                 Value<String?> companyPanSnapshot = const Value.absent(),
                 Value<String?> companyGstinSnapshot = const Value.absent(),
+                Value<Uint8List?> companyLogoSnapshot = const Value.absent(),
+                Value<bool> signatureAppliedSnapshot = const Value.absent(),
+                Value<Uint8List?> signatureImageSnapshot = const Value.absent(),
+                Value<String?> signatoryNameSnapshot = const Value.absent(),
+                Value<String?> signatoryDesignationSnapshot =
+                    const Value.absent(),
+                Value<bool> signatureEligible = const Value.absent(),
                 required String partyNameSnapshot,
                 Value<String?> partyAddress1Snapshot = const Value.absent(),
                 Value<String?> partyAddress2Snapshot = const Value.absent(),
@@ -13601,6 +15382,12 @@ class $$InvoicesTableTableManager
                 companyAddress3Snapshot: companyAddress3Snapshot,
                 companyPanSnapshot: companyPanSnapshot,
                 companyGstinSnapshot: companyGstinSnapshot,
+                companyLogoSnapshot: companyLogoSnapshot,
+                signatureAppliedSnapshot: signatureAppliedSnapshot,
+                signatureImageSnapshot: signatureImageSnapshot,
+                signatoryNameSnapshot: signatoryNameSnapshot,
+                signatoryDesignationSnapshot: signatoryDesignationSnapshot,
+                signatureEligible: signatureEligible,
                 partyNameSnapshot: partyNameSnapshot,
                 partyAddress1Snapshot: partyAddress1Snapshot,
                 partyAddress2Snapshot: partyAddress2Snapshot,

@@ -232,15 +232,18 @@ class _NotesHero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryDark, AppTheme.primary],
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.secondary,
+          ],
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: .15),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: .15),
             blurRadius: 22,
             offset: const Offset(0, 9),
           ),
@@ -286,7 +289,7 @@ class _NotesHero extends StatelessWidget {
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: AppTheme.primaryDark,
+                  foregroundColor: Theme.of(context).colorScheme.primary,
                 ),
                 onPressed: onAdd,
                 icon: const Icon(Icons.add_rounded, size: 18),
@@ -379,7 +382,7 @@ class _NoteCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: note.isPinned
-                  ? AppTheme.primary.withValues(alpha: .30)
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: .30)
                   : AppTheme.border,
             ),
           ),
@@ -391,7 +394,7 @@ class _NoteCard extends StatelessWidget {
                 height: 42,
                 decoration: BoxDecoration(
                   color: note.isPinned
-                      ? AppTheme.primarySoft
+                      ? Theme.of(context).colorScheme.primaryContainer
                       : AppTheme.surfaceMuted,
                   borderRadius: BorderRadius.circular(13),
                 ),
@@ -400,7 +403,7 @@ class _NoteCard extends StatelessWidget {
                       ? Icons.push_pin_rounded
                       : Icons.note_alt_outlined,
                   color: note.isPinned
-                      ? AppTheme.primary
+                      ? Theme.of(context).colorScheme.primary
                       : AppTheme.secondaryText,
                   size: 20,
                 ),
@@ -626,12 +629,12 @@ class _NoteFormSheetState extends ConsumerState<_NoteFormSheet> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: AppTheme.primarySoft,
+                          color: Theme.of(context).colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(13),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.note_alt_outlined,
-                          color: AppTheme.primary,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
 
@@ -731,7 +734,7 @@ class _NoteFormSheetState extends ConsumerState<_NoteFormSheet> {
                                     ? Icons.push_pin_rounded
                                     : Icons.push_pin_outlined,
                                 color: _pinned
-                                    ? AppTheme.primary
+                                    ? Theme.of(context).colorScheme.primary
                                     : AppTheme.secondaryText,
                               ),
                               title: const Text(
@@ -812,12 +815,12 @@ class _NotesEmpty extends StatelessWidget {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: AppTheme.primarySoft,
+              color: Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.note_add_outlined,
-              color: AppTheme.primary,
+              color: Theme.of(context).colorScheme.primary,
               size: 27,
             ),
           ),

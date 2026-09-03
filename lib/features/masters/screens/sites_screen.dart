@@ -6,6 +6,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../company/providers/company_providers.dart';
+import '../../parties/providers/party_providers.dart';
 import '../providers/site_providers.dart';
 import '../widgets/master_data_ui.dart';
 
@@ -163,6 +164,7 @@ class _SiteFormState extends ConsumerState<_SiteForm> {
 
   late final TextEditingController _name;
   late final TextEditingController _code;
+  Party? _party;
 
   bool _saving = false;
 
@@ -190,10 +192,15 @@ class _SiteFormState extends ConsumerState<_SiteForm> {
     try {
       final db = ref.read(appDatabaseProvider);
 
+      if (_party == null) {
+        throw StateError('Please select a customer / party.');
+      }
+
       if (widget.site == null) {
         await db.insertSiteRecord(
           SitesCompanion.insert(
             companyId: widget.companyId,
+            partyId: Value(_party!.id),
             siteName: _name.text.trim(),
             siteCode: Value(_code.text.trim().toUpperCase()),
           ),
@@ -202,6 +209,7 @@ class _SiteFormState extends ConsumerState<_SiteForm> {
         await db.updateSiteRecord(
           SitesCompanion(
             id: Value(widget.site!.id),
+            partyId: Value(_party!.id),
             siteName: Value(_name.text.trim()),
             siteCode: Value(_code.text.trim().toUpperCase()),
           ),
@@ -216,6 +224,8 @@ class _SiteFormState extends ConsumerState<_SiteForm> {
 
   @override
   Widget build(BuildContext context) {
+    final partiesAsync = ref.watch(partiesProvider);
+
     return MasterFormShell(
       title: widget.site == null ? 'New Site / Plant' : 'Edit Site / Plant',
       subtitle: 'Location used for service billing',
@@ -227,6 +237,47 @@ class _SiteFormState extends ConsumerState<_SiteForm> {
         key: _formKey,
         child: Column(
           children: [
+            partiesAsync.when(
+              loading: () => const LinearProgressIndicator(),
+              error: (error, stack) => Text(
+                'Unable to load customers: $error',
+                style: const TextStyle(color: AppTheme.danger),
+              ),
+              data: (parties) {
+                if (_party == null && widget.site?.partyId != null) {
+                  for (final party in parties) {
+                    if (party.id == widget.site!.partyId) {
+                      _party = party;
+                      break;
+                    }
+                  }
+                }
+                return DropdownButtonFormField<Party>(
+                  key: ValueKey(
+                    _party?.id ?? widget.site?.partyId ?? 'no-party',
+                  ),
+                  initialValue: _party,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Customer / Party',
+                    prefixIcon: Icon(Icons.business_outlined),
+                  ),
+                  items: parties.where((p) => p.isActive).map((party) {
+                    return DropdownMenuItem(
+                      value: party,
+                      child: Text(
+                        party.partyName,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) => setState(() => _party = value),
+                  validator: (value) =>
+                      value == null ? 'Customer / party is required' : null,
+                );
+              },
+            ),
+            const SizedBox(height: 12),
             TextFormField(
               controller: _name,
               textCapitalization: TextCapitalization.words,

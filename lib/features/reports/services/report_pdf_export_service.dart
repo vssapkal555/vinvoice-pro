@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/services.dart';
 
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -7,7 +7,9 @@ import 'package:printing/printing.dart';
 class ReportPdfExportService {
   const ReportPdfExportService._();
 
-  static const PdfColor _brandBlue = PdfColor.fromInt(0xFF3B82F6);
+  static const PdfColor _brandBlue = PdfColor.fromInt(0xFF101828);
+
+  static const PdfColor _accentBlue = PdfColor.fromInt(0xFF2563EB);
 
   static const PdfColor _darkText = PdfColor.fromInt(0xFF0F172A);
 
@@ -24,8 +26,22 @@ class ReportPdfExportService {
     List<List<String>> metadata = const [],
     List<String>? totalsRow,
     bool landscape = false,
+    Uint8List? companyLogo,
+    String? companyName,
   }) async {
     final document = pw.Document();
+    final appLogo = (await rootBundle.load(
+      'assets/branding/vinvoice_pro_logo.png',
+    )).buffer.asUint8List();
+
+    final cleanHeaders = headers.map(_cleanPdfText).toList();
+    final cleanRows = rows
+        .map((row) => row.map(_cleanPdfText).toList())
+        .toList();
+    final cleanMetadata = metadata
+        .map((row) => row.map(_cleanPdfText).toList())
+        .toList();
+    final cleanTotals = totalsRow?.map(_cleanPdfText).toList();
 
     final format = landscape ? PdfPageFormat.a4.landscape : PdfPageFormat.a4;
 
@@ -33,12 +49,21 @@ class ReportPdfExportService {
       pw.MultiPage(
         pageFormat: format,
         margin: const pw.EdgeInsets.all(24),
-        header: (context) => _buildHeader(reportTitle, metadata),
+        header: (context) => _buildHeader(
+          reportTitle,
+          cleanMetadata,
+          companyLogo: companyLogo,
+          companyName: companyName,
+        ),
         footer: (context) =>
-            _buildFooter(context.pageNumber, context.pagesCount),
+            _buildFooter(context.pageNumber, context.pagesCount, appLogo),
         build: (context) => [
           pw.SizedBox(height: 10),
-          _buildTable(headers: headers, rows: rows, totalsRow: totalsRow),
+          _buildTable(
+            headers: cleanHeaders,
+            rows: cleanRows,
+            totalsRow: cleanTotals,
+          ),
         ],
       ),
     );
@@ -54,6 +79,8 @@ class ReportPdfExportService {
     List<List<String>> metadata = const [],
     List<String>? totalsRow,
     bool landscape = false,
+    Uint8List? companyLogo,
+    String? companyName,
   }) async {
     final bytes = await build(
       reportTitle: reportTitle,
@@ -62,6 +89,8 @@ class ReportPdfExportService {
       metadata: metadata,
       totalsRow: totalsRow,
       landscape: landscape,
+      companyLogo: companyLogo,
+      companyName: companyName,
     );
 
     await Printing.sharePdf(bytes: bytes, filename: '$fileName.pdf');
@@ -74,6 +103,8 @@ class ReportPdfExportService {
     List<List<String>> metadata = const [],
     List<String>? totalsRow,
     bool landscape = false,
+    Uint8List? companyLogo,
+    String? companyName,
   }) async {
     final bytes = await build(
       reportTitle: reportTitle,
@@ -82,6 +113,8 @@ class ReportPdfExportService {
       metadata: metadata,
       totalsRow: totalsRow,
       landscape: landscape,
+      companyLogo: companyLogo,
+      companyName: companyName,
     );
 
     await Printing.layoutPdf(onLayout: (_) async => bytes, name: reportTitle);
@@ -89,8 +122,10 @@ class ReportPdfExportService {
 
   static pw.Widget _buildHeader(
     String reportTitle,
-    List<List<String>> metadata,
-  ) {
+    List<List<String>> metadata, {
+    Uint8List? companyLogo,
+    String? companyName,
+  }) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -101,13 +136,55 @@ class ReportPdfExportService {
             color: _brandBlue,
             borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
           ),
-          child: pw.Text(
-            reportTitle,
-            style: pw.TextStyle(
-              color: PdfColors.white,
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-            ),
+          child: pw.Row(
+            children: [
+              pw.Container(
+                width: 4,
+                height: 28,
+                decoration: const pw.BoxDecoration(
+                  color: _accentBlue,
+                  borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
+                ),
+              ),
+              pw.SizedBox(width: 10),
+              if (companyLogo != null && companyLogo.isNotEmpty) ...[
+                pw.Container(
+                  width: 42,
+                  height: 30,
+                  padding: const pw.EdgeInsets.all(2),
+                  decoration: const pw.BoxDecoration(color: PdfColors.white),
+                  child: pw.Image(
+                    pw.MemoryImage(companyLogo),
+                    fit: pw.BoxFit.contain,
+                  ),
+                ),
+                pw.SizedBox(width: 10),
+              ],
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    if (companyName != null && companyName.trim().isNotEmpty)
+                      pw.Text(
+                        companyName.trim(),
+                        style: pw.TextStyle(
+                          color: PdfColors.white,
+                          fontSize: 8.5,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                    pw.Text(
+                      reportTitle,
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
         if (metadata.isNotEmpty) ...[
@@ -184,7 +261,7 @@ class ReportPdfExportService {
       textStyleBuilder: (index, value, rowNum) {
         if (rowNum == totalRowIndex) {
           return pw.TextStyle(
-            color: const PdfColor.fromInt(0xFF1D4ED8),
+            color: _accentBlue,
             fontSize: 7,
             fontWeight: pw.FontWeight.bold,
           );
@@ -209,7 +286,17 @@ class ReportPdfExportService {
     );
   }
 
-  static pw.Widget _buildFooter(int pageNumber, int pageCount) {
+  static String _cleanPdfText(String value) {
+    // PDF preference: monetary values are shown without a rupee symbol.
+    // App UI and Excel output remain unchanged.
+    return value.replaceAll(String.fromCharCode(0x20B9), '').trim();
+  }
+
+  static pw.Widget _buildFooter(
+    int pageNumber,
+    int pageCount,
+    Uint8List appLogo,
+  ) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 10),
       padding: const pw.EdgeInsets.only(top: 6),
@@ -219,9 +306,14 @@ class ReportPdfExportService {
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text(
-            'Generated by VInvoice Pro',
-            style: const pw.TextStyle(color: _mutedText, fontSize: 7),
+          pw.SizedBox(
+            width: 88,
+            height: 14,
+            child: pw.Image(
+              pw.MemoryImage(appLogo),
+              fit: pw.BoxFit.contain,
+              alignment: pw.Alignment.centerLeft,
+            ),
           ),
           pw.Text(
             'Page $pageNumber of $pageCount',

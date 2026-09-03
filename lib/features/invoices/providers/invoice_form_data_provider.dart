@@ -65,7 +65,7 @@ final invoiceFormDataProvider = FutureProvider.autoDispose<InvoiceFormData>((
 
   final invoiceNumber = await InvoiceNumberService(
     db,
-  ).generateNext(companyId: company.id, date: DateTime.now());
+  ).generateNext(company: company, date: DateTime.now());
 
   return InvoiceFormData(
     company: company,

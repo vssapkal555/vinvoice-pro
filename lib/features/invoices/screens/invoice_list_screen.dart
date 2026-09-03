@@ -301,7 +301,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                                     ),
                                     itemCount: filtered.length,
                                     separatorBuilder: (_, _) =>
-                                        const SizedBox(height: 10),
+                                        const SizedBox(height: 8),
                                     itemBuilder: (context, index) {
                                       final invoice = filtered[index];
 
@@ -333,47 +333,88 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
 
 class _Header extends StatelessWidget {
   const _Header({required this.onNewInvoice});
-
   final VoidCallback onNewInvoice;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
         AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.sm,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Invoices',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Manage billing and payment status',
-                  style: TextStyle(color: AppTheme.secondaryText, fontSize: 13),
-                ),
-              ],
-            ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: Color.lerp(AppTheme.border, scheme.primary, 0.08)!,
           ),
-          FilledButton.icon(
-            onPressed: onNewInvoice,
-            icon: const Icon(Icons.add_rounded, size: 19),
-            label: const Text('New'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(0, 48),
-              padding: const EdgeInsets.symmetric(horizontal: 17),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.darkText.withValues(alpha: 0.025),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.receipt_long_rounded,
+                color: scheme.primary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 11),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Invoices',
+                    style: TextStyle(
+                      color: AppTheme.darkText,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Manage billing and payment status',
+                    style: TextStyle(
+                      color: AppTheme.secondaryText,
+                      fontSize: 10.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: onNewInvoice,
+              icon: const Icon(Icons.add_rounded, size: 17),
+              label: const Text('New'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 42),
+                padding: const EdgeInsets.symmetric(horizontal: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -474,13 +515,13 @@ class _FilterPill extends StatelessWidget {
     required this.selected,
     required this.onTap,
   });
-
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: 7),
       child: InkWell(
@@ -491,11 +532,11 @@ class _FilterPill extends StatelessWidget {
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? AppTheme.primarySoft : AppTheme.surface,
+            color: selected ? scheme.primaryContainer : AppTheme.surface,
             borderRadius: BorderRadius.circular(AppRadius.pill),
             border: Border.all(
               color: selected
-                  ? AppTheme.primary.withValues(alpha: 0.22)
+                  ? scheme.primary.withValues(alpha: 0.28)
                   : AppTheme.border,
             ),
           ),
@@ -503,11 +544,7 @@ class _FilterPill extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (selected) ...[
-                const Icon(
-                  Icons.check_rounded,
-                  size: 15,
-                  color: AppTheme.primary,
-                ),
+                Icon(Icons.check_rounded, size: 15, color: scheme.primary),
                 const SizedBox(width: 5),
               ],
               Text(
@@ -515,9 +552,7 @@ class _FilterPill extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                  color: selected
-                      ? AppTheme.primaryDark
-                      : AppTheme.secondaryText,
+                  color: selected ? scheme.primary : AppTheme.secondaryText,
                 ),
               ),
             ],
@@ -613,7 +648,7 @@ class _InvoiceTile extends StatelessWidget {
             border: Border.all(color: AppTheme.border),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -621,16 +656,16 @@ class _InvoiceTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 42,
-                      height: 42,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
-                        color: _invoiceIconBackground(invoice.status),
+                        color: _invoiceIconBackground(context, invoice.status),
                         borderRadius: BorderRadius.circular(13),
                       ),
                       child: Icon(
                         Icons.receipt_long_outlined,
-                        size: 20,
-                        color: _invoiceIconColor(invoice.status),
+                        size: 18,
+                        color: _invoiceIconColor(context, invoice.status),
                       ),
                     ),
 
@@ -646,7 +681,7 @@ class _InvoiceTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: AppTheme.darkText,
-                              fontSize: 15,
+                              fontSize: 14,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.15,
                             ),
@@ -658,7 +693,7 @@ class _InvoiceTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: AppTheme.secondaryText,
-                              fontSize: 12.5,
+                              fontSize: 11.5,
                             ),
                           ),
                         ],
@@ -671,7 +706,7 @@ class _InvoiceTile extends StatelessWidget {
                       amount,
                       style: const TextStyle(
                         color: AppTheme.darkText,
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.25,
                       ),
@@ -679,7 +714,7 @@ class _InvoiceTile extends StatelessWidget {
                   ],
                 ),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
                 Row(
                   children: [
@@ -693,7 +728,7 @@ class _InvoiceTile extends StatelessWidget {
                       date,
                       style: const TextStyle(
                         color: AppTheme.secondaryText,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
 
@@ -711,7 +746,7 @@ class _InvoiceTile extends StatelessWidget {
                     const Icon(
                       Icons.chevron_right_rounded,
                       color: AppTheme.tertiaryText,
-                      size: 20,
+                      size: 18,
                     ),
                   ],
                 ),
@@ -739,19 +774,19 @@ class _InvoiceTile extends StatelessWidget {
     return _PaymentState.partial;
   }
 
-  Color _invoiceIconBackground(String status) {
+  Color _invoiceIconBackground(BuildContext context, String status) {
     return switch (status) {
       'draft' => AppTheme.warningSoft,
       'cancelled' => AppTheme.dangerSoft,
-      _ => AppTheme.primarySoft,
+      _ => Theme.of(context).colorScheme.primaryContainer,
     };
   }
 
-  Color _invoiceIconColor(String status) {
+  Color _invoiceIconColor(BuildContext context, String status) {
     return switch (status) {
       'draft' => AppTheme.warning,
       'cancelled' => AppTheme.danger,
-      _ => AppTheme.primary,
+      _ => Theme.of(context).colorScheme.primary,
     };
   }
 }
@@ -782,8 +817,8 @@ class _LifecycleBadge extends StatelessWidget {
       ),
       _ => (
         label: 'ISSUED',
-        foreground: AppTheme.primaryDark,
-        background: AppTheme.primarySoft,
+        foreground: Theme.of(context).colorScheme.primary,
+        background: Theme.of(context).colorScheme.primaryContainer,
       ),
     };
 
@@ -916,7 +951,7 @@ class _EmptyState extends StatelessWidget {
                         width: 66,
                         height: 66,
                         decoration: BoxDecoration(
-                          color: AppTheme.primarySoft,
+                          color: Theme.of(context).colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(21),
                         ),
                         child: Icon(
@@ -924,7 +959,7 @@ class _EmptyState extends StatelessWidget {
                               ? Icons.filter_alt_off_rounded
                               : Icons.receipt_long_outlined,
                           size: 30,
-                          color: AppTheme.primary,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
 

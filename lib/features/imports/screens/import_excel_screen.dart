@@ -400,15 +400,18 @@ class _ImportHero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryDark, AppTheme.primary],
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.secondary,
+          ],
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: .15),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: .15),
             blurRadius: 22,
             offset: const Offset(0, 9),
           ),
@@ -481,7 +484,7 @@ class _ImportHero extends StatelessWidget {
           FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: AppTheme.primaryDark,
+              foregroundColor: Theme.of(context).colorScheme.primary,
             ),
             onPressed: reading ? null : onPick,
             icon: reading
@@ -953,10 +956,14 @@ class _ImportSection extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: AppTheme.primarySoft,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(icon, color: AppTheme.primary, size: 18),
+                child: Icon(
+                  icon,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 10),
               Text(
@@ -1062,12 +1069,12 @@ class _ImportHistory extends ConsumerWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppTheme.primarySoft,
+                        color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.table_view_outlined,
-                        color: AppTheme.primary,
+                        color: Theme.of(context).colorScheme.primary,
                         size: 19,
                       ),
                     ),

@@ -7,6 +7,7 @@ import '../../parties/screens/parties_screen.dart';
 import '../../notes/screens/notes_screen.dart';
 import '../../reports/screens/reports_screen.dart';
 import 'dashboard_screen.dart';
+import 'app_shell_navigation.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -16,6 +17,38 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
+  @override
+  void initState() {
+    super.initState();
+    appShellNavigationRequest.addListener(_handleExternalNavigation);
+  }
+
+  @override
+  void dispose() {
+    appShellNavigationRequest.removeListener(_handleExternalNavigation);
+    super.dispose();
+  }
+
+  void _handleExternalNavigation() {
+    final requestedIndex = appShellNavigationRequest.value;
+    if (requestedIndex == null) {
+      return;
+    }
+
+    appShellNavigationRequest.value = null;
+
+    if (!mounted ||
+        requestedIndex < 0 ||
+        requestedIndex >= _destinations.length ||
+        requestedIndex == _selectedIndex) {
+      return;
+    }
+
+    setState(() {
+      _selectedIndex = requestedIndex;
+    });
+  }
+
   int _selectedIndex = 0;
 
   static const List<_AppDestination> _destinations = [
@@ -192,7 +225,9 @@ class _MobileNavigationItem extends StatelessWidget {
           curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? AppTheme.primarySoft : Colors.transparent,
+            color: selected
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(19),
           ),
           child: Column(
@@ -204,7 +239,9 @@ class _MobileNavigationItem extends StatelessWidget {
                 width: 36,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: selected ? AppTheme.primary : Colors.transparent,
+                  color: selected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
@@ -223,7 +260,9 @@ class _MobileNavigationItem extends StatelessWidget {
                   height: 1,
                   fontSize: 10.5,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                  color: selected ? AppTheme.primary : AppTheme.secondaryText,
+                  color: selected
+                      ? Theme.of(context).colorScheme.primary
+                      : AppTheme.secondaryText,
                 ),
               ),
             ],
@@ -337,7 +376,9 @@ class _DesktopNavigationItem extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 11),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.primarySoft : Colors.transparent,
+          color: selected
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(17),
         ),
         child: Column(
@@ -347,7 +388,9 @@ class _DesktopNavigationItem extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: selected ? AppTheme.primary : AppTheme.surfaceMuted,
+                color: selected
+                    ? Theme.of(context).colorScheme.primary
+                    : AppTheme.surfaceMuted,
                 borderRadius: BorderRadius.circular(13),
               ),
               alignment: Alignment.center,
@@ -366,7 +409,9 @@ class _DesktopNavigationItem extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10.5,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                color: selected ? AppTheme.primary : AppTheme.secondaryText,
+                color: selected
+                    ? Theme.of(context).colorScheme.primary
+                    : AppTheme.secondaryText,
               ),
             ),
           ],
@@ -389,15 +434,20 @@ class _BrandMark extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryDark, AppTheme.primary],
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.secondary,
+          ],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.20),
+            color: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.20),
             blurRadius: 16,
             offset: const Offset(0, 7),
           ),
@@ -434,153 +484,141 @@ class MorePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+      child: Column(
         children: [
-          const _MoreHero(),
-
-          const SizedBox(height: 18),
-
-          const _MoreSectionHeading(
-            title: 'Business Setup',
-            subtitle: 'Company identity and customer-specific master data',
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: _MoreHero(),
           ),
-
-          const SizedBox(height: 9),
-
-          _MoreGroup(
-            items: [
-              _MoreEntry(
-                icon: Icons.apartment_rounded,
-                title: 'My Company',
-                subtitle: 'Letterhead, GST, PAN, address and contacts',
-                onTap: () => context.push('/company'),
-              ),
-              _MoreEntry(
-                icon: Icons.numbers_rounded,
-                title: 'Vendor Codes',
-                subtitle: 'Customer billing reference codes',
-                onTap: () => context.push('/vendor-codes'),
-              ),
-              _MoreEntry(
-                icon: Icons.location_on_outlined,
-                title: 'Sites / Plants',
-                subtitle: 'Customer sites and service locations',
-                onTap: () => context.push('/sites'),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          const _MoreSectionHeading(
-            title: 'Invoice Masters',
-            subtitle: 'Values used while creating invoice services and tax',
-          ),
-
-          const SizedBox(height: 9),
-
-          _MoreGroup(
-            items: [
-              _MoreEntry(
-                icon: Icons.straighten_rounded,
-                title: 'Units',
-                subtitle: 'EA, Days, Months, KM and custom units',
-                onTap: () => context.push('/units'),
-              ),
-              _MoreEntry(
-                icon: Icons.percent_rounded,
-                title: 'GST & Tax',
-                subtitle: 'CGST, SGST, IGST and custom tax rates',
-                onTap: () => context.push('/tax-rates'),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          const _MoreSectionHeading(
-            title: 'Business Operations',
-            subtitle: 'Track day-to-day business spending and costs',
-          ),
-
-          const SizedBox(height: 9),
-
-          _MoreGroup(
-            items: [
-              _MoreEntry(
-                icon: Icons.receipt_long_outlined,
-                title: 'Expenses',
-                subtitle: 'Record, review and manage business expenses',
-                onTap: () => context.push('/expenses'),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          const _MoreSectionHeading(
-            title: 'Data Tools',
-            subtitle: 'Bring historical invoice data into VInvoice',
-          ),
-
-          const SizedBox(height: 9),
-
-          _MoreGroup(
-            items: [
-              _MoreEntry(
-                icon: Icons.upload_file_rounded,
-                title: 'Import Excel',
-                subtitle: 'Validate and import historical invoices',
-                onTap: () => context.push('/import-excel'),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          const _MoreSectionHeading(
-            title: 'Application',
-            subtitle: 'Additional preferences and configuration',
-          ),
-
-          const SizedBox(height: 9),
-
-          _MoreGroup(
-            items: [
-              _MoreEntry(
-                icon: Icons.note_alt_outlined,
-                title: 'Notes',
-                subtitle: 'Business reminders and important information',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const NotesScreen(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 120),
+              children: [
+                const _MoreSectionHeading(
+                  title: 'Business Setup',
+                  subtitle:
+                      'Company identity and customer-specific master data',
+                ),
+                const SizedBox(height: 8),
+                _MoreGroup(
+                  items: [
+                    _MoreEntry(
+                      icon: Icons.apartment_rounded,
+                      title: 'My Company',
+                      subtitle: 'Letterhead, GST, PAN, address and contacts',
+                      onTap: () => context.push('/company'),
                     ),
-                  );
-                },
-              ),
-              _MoreEntry(
-                icon: Icons.settings_outlined,
-                title: 'Settings',
-                subtitle: 'More application preferences coming later',
-                badge: 'SOON',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Additional settings will be available in a future milestone.',
-                      ),
+                    _MoreEntry(
+                      icon: Icons.numbers_rounded,
+                      title: 'Vendor Codes',
+                      subtitle: 'Customer billing reference codes',
+                      onTap: () => context.push('/vendor-codes'),
                     ),
-                  );
-                },
-              ),
-            ],
+                    _MoreEntry(
+                      icon: Icons.location_on_outlined,
+                      title: 'Sites / Plants',
+                      subtitle: 'Customer sites and service locations',
+                      onTap: () => context.push('/sites'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const _MoreSectionHeading(
+                  title: 'Invoice Masters',
+                  subtitle:
+                      'Values used while creating invoice services and tax',
+                ),
+                const SizedBox(height: 8),
+                _MoreGroup(
+                  items: [
+                    _MoreEntry(
+                      icon: Icons.straighten_rounded,
+                      title: 'Units',
+                      subtitle: 'EA, Days, Months, KM and custom units',
+                      onTap: () => context.push('/units'),
+                    ),
+                    _MoreEntry(
+                      icon: Icons.percent_rounded,
+                      title: 'GST & Tax',
+                      subtitle: 'CGST, SGST, IGST and custom tax rates',
+                      onTap: () => context.push('/tax-rates'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const _MoreSectionHeading(
+                  title: 'Business Operations',
+                  subtitle: 'Track day-to-day business spending and costs',
+                ),
+                const SizedBox(height: 8),
+                _MoreGroup(
+                  items: [
+                    _MoreEntry(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'Expenses',
+                      subtitle: 'Record, review and manage business expenses',
+                      onTap: () => context.push('/expenses'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const _MoreSectionHeading(
+                  title: 'Data Tools',
+                  subtitle: 'Bring historical invoice data into VInvoice',
+                ),
+                const SizedBox(height: 8),
+                _MoreGroup(
+                  items: [
+                    _MoreEntry(
+                      icon: Icons.upload_file_rounded,
+                      title: 'Import Excel',
+                      subtitle: 'Validate and import historical invoices',
+                      onTap: () => context.push('/import-excel'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const _MoreSectionHeading(
+                  title: 'Application',
+                  subtitle: 'Additional preferences and configuration',
+                ),
+                const SizedBox(height: 8),
+                _MoreGroup(
+                  items: [
+                    _MoreEntry(
+                      icon: Icons.note_alt_outlined,
+                      title: 'Notes',
+                      subtitle: 'Business reminders and important information',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const NotesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _MoreEntry(
+                      icon: Icons.settings_outlined,
+                      title: 'Settings',
+                      subtitle: 'More application preferences coming later',
+                      badge: 'SOON',
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Additional settings will be available in a future milestone.',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const _MoreFooter(),
+              ],
+            ),
           ),
-
-          const SizedBox(height: 18),
-
-          const _MoreFooter(),
         ],
       ),
     );
@@ -592,27 +630,32 @@ class _MoreHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
-      padding: const EdgeInsets.all(19),
+      padding: const EdgeInsets.fromLTRB(15, 12, 15, 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryDark, AppTheme.primary],
+          colors: [
+            scheme.primary,
+            Color.lerp(scheme.primary, scheme.secondary, 0.58)!,
+          ],
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: .15),
-            blurRadius: 22,
-            offset: const Offset(0, 9),
+            color: scheme.primary.withValues(alpha: .13),
+            blurRadius: 17,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
       child: const Row(
         children: [
           _BrandMark(),
-          SizedBox(width: 14),
+          SizedBox(width: 11),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -621,14 +664,14 @@ class _MoreHero extends StatelessWidget {
                   'VInvoice Control Center',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 2),
                 Text(
                   'Business setup, masters and data tools',
-                  style: TextStyle(color: Colors.white70, fontSize: 10),
+                  style: TextStyle(color: Colors.white70, fontSize: 9.5),
                 ),
               ],
             ),
@@ -725,10 +768,14 @@ class _MoreEntry extends StatelessWidget {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: AppTheme.primarySoft,
+                color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(icon, color: AppTheme.primary, size: 20),
+              child: Icon(
+                icon,
+                color: Theme.of(context).colorScheme.primary,
+                size: 20,
+              ),
             ),
 
             const SizedBox(width: 13),

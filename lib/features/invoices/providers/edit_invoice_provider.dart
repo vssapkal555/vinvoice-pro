@@ -44,8 +44,18 @@ final editInvoiceProvider = FutureProvider.family<EditInvoiceData, String>((
     throw StateError('Invoice not found.');
   }
 
-  if (invoice.status != 'draft') {
-    throw StateError('Only Draft invoices can be edited.');
+  final status = invoice.status.toLowerCase();
+  if (status != 'draft' && status != 'issued') {
+    throw StateError('Only Draft or unpaid Issued invoices can be edited.');
+  }
+
+  if (status == 'issued') {
+    final payments = await db.getPaymentsForInvoice(invoiceId);
+    if (payments.isNotEmpty) {
+      throw StateError(
+        'This issued invoice already has payment activity and cannot be edited.',
+      );
+    }
   }
 
   final results = await Future.wait([

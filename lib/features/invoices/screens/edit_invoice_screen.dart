@@ -190,6 +190,30 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
     return widget.data.units.isEmpty ? null : widget.data.units.first;
   }
 
+  List<Site> get _availableSites {
+    final party = _party;
+    if (party == null) return const [];
+    return widget.data.sites
+        .where(
+          (site) =>
+              site.companyId == widget.data.company.id &&
+              site.partyId == party.id &&
+              site.isActive,
+        )
+        .toList();
+  }
+
+  VendorCode? _vendorForParty(Party? party) {
+    if (party == null) return null;
+    final matches = widget.data.vendorCodes.where(
+      (vendor) =>
+          vendor.companyId == widget.data.company.id &&
+          vendor.partyId == party.id &&
+          vendor.isActive,
+    );
+    return matches.isEmpty ? null : matches.first;
+  }
+
   void _markDirty() {
     if (!_dirty && mounted) {
       setState(() {
@@ -356,6 +380,16 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
       return;
     }
 
+    if (_vendorCode == null) {
+      _message('This customer has no mapped vendor code.');
+      return;
+    }
+
+    if (_availableSites.isNotEmpty && _site == null) {
+      _message('Please select a Site / Plant.');
+      return;
+    }
+
     final validItems = _items.where(
       (item) => item.description.text.trim().isNotEmpty,
     );
@@ -401,6 +435,16 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
         ),
         companyPanSnapshot: Value(company.pan),
         companyGstinSnapshot: Value(company.gstin),
+        signatureAppliedSnapshot: Value(
+          company.applySignature &&
+              company.signatureImage != null &&
+              company.signatureImage!.isNotEmpty,
+        ),
+        signatureImageSnapshot: Value(
+          company.applySignature ? company.signatureImage : null,
+        ),
+        signatoryNameSnapshot: Value(company.signatoryName),
+        signatoryDesignationSnapshot: Value(company.signatoryDesignation),
 
         partyNameSnapshot: Value(party.partyName),
         partyAddress1Snapshot: Value(party.address1),
@@ -479,7 +523,13 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
       _dirty = false;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Draft updated successfully')),
+        SnackBar(
+          content: Text(
+            _invoice.status == 'issued'
+                ? 'Issued invoice updated successfully'
+                : 'Draft updated successfully',
+          ),
+        ),
       );
 
       Navigator.pop(context);
@@ -574,7 +624,11 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
       },
       child: Scaffold(
         backgroundColor: AppTheme.background,
-        appBar: AppBar(title: const Text('Edit Draft')),
+        appBar: AppBar(
+          title: Text(
+            _invoice.status == 'issued' ? 'Edit Issued Invoice' : 'Edit Draft',
+          ),
+        ),
         body: Form(
           key: _formKey,
           child: LayoutBuilder(
@@ -622,8 +676,22 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
                         );
                       }).toList(),
                       onChanged: (value) {
+                        final vendor = _vendorForParty(value);
+                        final sites = value == null
+                            ? <Site>[]
+                            : widget.data.sites
+                                  .where(
+                                    (site) =>
+                                        site.companyId ==
+                                            widget.data.company.id &&
+                                        site.partyId == value.id &&
+                                        site.isActive,
+                                  )
+                                  .toList();
                         setState(() {
                           _party = value;
+                          _vendorCode = vendor;
+                          _site = sites.length == 1 ? sites.first : null;
                           _dirty = true;
                         });
                       },
@@ -655,45 +723,55 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
                               prefixIcon: Icon(Icons.assignment_outlined),
                             ),
                           ),
-                          DropdownButtonFormField<VendorCode>(
-                            initialValue: _vendorCode,
-                            isExpanded: true,
-                            decoration: const InputDecoration(
+                          TextFormField(
+                            key: ValueKey(_vendorCode?.id ?? 'no-vendor-code'),
+                            initialValue: _vendorCode?.vendorCode ?? '',
+                            readOnly: true,
+                            decoration: InputDecoration(
                               labelText: 'Vendor Code',
-                              prefixIcon: Icon(Icons.numbers_rounded),
+                              prefixIcon: const Icon(Icons.numbers_rounded),
+                              helperText: _party == null
+                                  ? 'Select customer first'
+                                  : _vendorCode == null
+                                  ? 'No vendor code mapped'
+                                  : 'Automatically selected',
                             ),
-                            items: widget.data.vendorCodes.map((vendor) {
-                              return DropdownMenuItem(
-                                value: vendor,
-                                child: Text(vendor.vendorCode),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _vendorCode = value;
-                                _dirty = true;
-                              });
-                            },
                           ),
                           DropdownButtonFormField<Site>(
-                            initialValue: _site,
-                            isExpanded: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Site / Plant',
-                              prefixIcon: Icon(Icons.location_on_outlined),
+                            key: ValueKey(
+                              '${_party?.id ?? 'no-party'}-${_site?.id ?? 'no-site'}',
                             ),
-                            items: widget.data.sites.map((site) {
+                            initialValue: _availableSites.contains(_site)
+                                ? _site
+                                : null,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: 'Site / Plant',
+                              prefixIcon: const Icon(
+                                Icons.location_on_outlined,
+                              ),
+                              helperText: _party == null
+                                  ? 'Select customer first'
+                                  : _availableSites.isEmpty
+                                  ? 'No site / plant configured'
+                                  : _availableSites.length == 1
+                                  ? 'Automatically selected'
+                                  : 'Choose site / plant',
+                            ),
+                            items: _availableSites.map((site) {
                               return DropdownMenuItem(
                                 value: site,
                                 child: Text(site.siteName),
                               );
                             }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _site = value;
-                                _dirty = true;
-                              });
-                            },
+                            onChanged: _party == null || _availableSites.isEmpty
+                                ? null
+                                : (value) {
+                                    setState(() {
+                                      _site = value;
+                                      _dirty = true;
+                                    });
+                                  },
                           ),
                         ];
 
@@ -967,7 +1045,9 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
                       _saving
                           ? 'Saving...'
                           : _dirty
-                          ? 'Update Draft'
+                          ? (_invoice.status == 'issued'
+                                ? 'Update Invoice'
+                                : 'Update Draft')
                           : 'Saved',
                     ),
                   ),
@@ -1111,13 +1191,13 @@ class _EditItemCardState extends State<_EditItemCard> {
                       height: 34,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: AppTheme.primarySoft,
+                        color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(11),
                       ),
                       child: Text(
                         widget.serialNo.toString().padLeft(2, '0'),
-                        style: const TextStyle(
-                          color: AppTheme.primary,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                         ),
@@ -1289,7 +1369,9 @@ class _EditItemCardState extends State<_EditItemCard> {
                             vertical: 9,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.primarySoft,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Column(
@@ -1356,15 +1438,20 @@ class _EditInvoiceHero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryDark, AppTheme.primary],
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.secondary,
+          ],
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.18),
+            color: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.18),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -1530,10 +1617,14 @@ class _EditSection extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppTheme.primarySoft,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: AppTheme.primary, size: 19),
+                child: Icon(
+                  icon,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 19,
+                ),
               ),
               const SizedBox(width: 11),
               Expanded(

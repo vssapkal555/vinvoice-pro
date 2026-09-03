@@ -20,6 +20,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(invoiceDetailProvider(invoiceId));
+    final paymentsAsync = ref.watch(invoicePaymentsProvider(invoiceId));
 
     return Scaffold(
       appBar: AppBar(
@@ -27,9 +28,20 @@ class InvoiceDetailScreen extends ConsumerWidget {
         actions: [
           detailAsync.maybeWhen(
             data: (detail) {
-              if (detail.invoice.status != 'draft') {
+              final status = detail.invoice.status.toLowerCase();
+              if (status != 'draft' && status != 'issued') {
                 return const SizedBox.shrink();
               }
+
+              final hasPayments = paymentsAsync.when<bool?>(
+                loading: () => null,
+                error: (error, stack) => null,
+                data: (payments) => payments.isNotEmpty,
+              );
+              if (status == 'issued' && hasPayments == null) {
+                return const SizedBox.shrink();
+              }
+              final paymentLocked = hasPayments ?? false;
 
               return PopupMenuButton<String>(
                 onSelected: (value) async {
@@ -47,7 +59,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
                       builder: (context) => AlertDialog(
                         title: const Text('Issue Invoice?'),
                         content: const Text(
-                          'Once issued, this invoice will no longer be editable as a draft.',
+                          'The invoice will be marked as Issued. It can still be corrected until payment activity is recorded.',
                         ),
                         actions: [
                           TextButton(
@@ -125,28 +137,33 @@ class InvoiceDetailScreen extends ConsumerWidget {
                     ref.invalidate(allInvoicesProvider);
                   }
                 },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: 'edit',
-                    child: ListTile(
-                      leading: Icon(Icons.edit_outlined),
-                      title: Text('Edit Draft'),
+                itemBuilder: (context) => [
+                  if (!paymentLocked)
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(
+                        leading: const Icon(Icons.edit_outlined),
+                        title: Text(
+                          status == 'issued' ? 'Edit Invoice' : 'Edit Draft',
+                        ),
+                      ),
                     ),
-                  ),
-                  PopupMenuItem(
-                    value: 'issue',
-                    child: ListTile(
-                      leading: Icon(Icons.check_circle_outline),
-                      title: Text('Issue Invoice'),
+                  if (status == 'draft')
+                    const PopupMenuItem(
+                      value: 'issue',
+                      child: ListTile(
+                        leading: Icon(Icons.check_circle_outline),
+                        title: Text('Issue Invoice'),
+                      ),
                     ),
-                  ),
-                  PopupMenuItem(
-                    value: 'cancel',
-                    child: ListTile(
-                      leading: Icon(Icons.cancel_outlined),
-                      title: Text('Cancel Invoice'),
+                  if (!paymentLocked)
+                    const PopupMenuItem(
+                      value: 'cancel',
+                      child: ListTile(
+                        leading: Icon(Icons.cancel_outlined),
+                        title: Text('Cancel Invoice'),
+                      ),
                     ),
-                  ),
                 ],
               );
             },
@@ -186,89 +203,121 @@ class _InvoiceDetailContent extends StatelessWidget {
       decimalDigits: 2,
     );
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+    return Column(
       children: [
-        _HeaderCard(invoice: invoice, currency: currency),
-
-        _InvoicePdfActionsBar(detail: detail),
-
-        _Section(
-          title: 'Party Details',
-          icon: Icons.business_outlined,
-          children: [
-            _DetailRow(label: 'Party Name', value: invoice.partyNameSnapshot),
-            _optionalRow('Address 1', invoice.partyAddress1Snapshot),
-            _optionalRow('Address 2', invoice.partyAddress2Snapshot),
-            _optionalRow(
-              'Address 3',
-              _cleanAddress(invoice.partyAddress3Snapshot),
-            ),
-            _optionalRow('PAN', invoice.partyPanSnapshot),
-            _optionalRow('GSTIN', invoice.partyGstinSnapshot),
-          ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: _HeaderCard(invoice: invoice, currency: currency),
         ),
-
-        _Section(
-          title: 'Invoice Information',
-          icon: Icons.description_outlined,
-          children: [
-            _DetailRow(label: 'Invoice No.', value: invoice.invoiceNumber),
-            _DetailRow(
-              label: 'Invoice Date',
-              value: DateFormat('dd-MM-yyyy').format(invoice.invoiceDate),
-            ),
-            _optionalRow('PO No.', invoice.poNumber),
-            _optionalRow('Vendor Code', invoice.vendorCodeSnapshot),
-            _optionalRow('Site / Plant', invoice.siteNameSnapshot),
-            _optionalRow('Service Entry', invoice.serviceEntry),
-            if (invoice.serviceFrom != null)
-              _DetailRow(
-                label: 'Service From',
-                value: DateFormat('dd-MM-yyyy').format(invoice.serviceFrom!),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: _InvoicePdfActionsBar(detail: detail),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+            children: [
+              _Section(
+                title: 'Party Details',
+                icon: Icons.business_outlined,
+                initiallyExpanded: false,
+                collapsedChild: _DetailRow(
+                  label: 'Party Name',
+                  value: invoice.partyNameSnapshot,
+                ),
+                children: [
+                  _DetailRow(
+                    label: 'Party Name',
+                    value: invoice.partyNameSnapshot,
+                  ),
+                  _optionalRow('Address 1', invoice.partyAddress1Snapshot),
+                  _optionalRow('Address 2', invoice.partyAddress2Snapshot),
+                  _optionalRow(
+                    'Address 3',
+                    _cleanAddress(invoice.partyAddress3Snapshot),
+                  ),
+                  _optionalRow('PAN', invoice.partyPanSnapshot),
+                  _optionalRow('GSTIN', invoice.partyGstinSnapshot),
+                ],
               ),
-            if (invoice.serviceTo != null)
-              _DetailRow(
-                label: 'Service To',
-                value: DateFormat('dd-MM-yyyy').format(invoice.serviceTo!),
+              _Section(
+                title: 'Invoice Information',
+                icon: Icons.description_outlined,
+                initiallyExpanded: false,
+                collapsedChild: _DetailRow(
+                  label: 'Invoice No.',
+                  value: invoice.invoiceNumber,
+                ),
+                children: [
+                  _DetailRow(
+                    label: 'Invoice No.',
+                    value: invoice.invoiceNumber,
+                  ),
+                  _DetailRow(
+                    label: 'Invoice Date',
+                    value: DateFormat('dd-MM-yyyy').format(invoice.invoiceDate),
+                  ),
+                  _optionalRow('PO No.', invoice.poNumber),
+                  _optionalRow('Vendor Code', invoice.vendorCodeSnapshot),
+                  _optionalRow('Site / Plant', invoice.siteNameSnapshot),
+                  _optionalRow('Service Entry', invoice.serviceEntry),
+                  if (invoice.serviceFrom != null)
+                    _DetailRow(
+                      label: 'Service From',
+                      value: DateFormat(
+                        'dd-MM-yyyy',
+                      ).format(invoice.serviceFrom!),
+                    ),
+                  if (invoice.serviceTo != null)
+                    _DetailRow(
+                      label: 'Service To',
+                      value: DateFormat(
+                        'dd-MM-yyyy',
+                      ).format(invoice.serviceTo!),
+                    ),
+                ],
               ),
-          ],
-        ),
-
-        _ItemsSection(items: detail.items, currency: currency),
-
-        _TaxSummary(invoice: invoice, currency: currency),
-
-        _InvoicePaymentCard(
-          invoiceId: invoice.id,
-          invoiceStatus: invoice.status,
-        ),
-
-        _Section(
-          title: 'Amount in Words',
-          icon: Icons.translate_rounded,
-          children: [
-            Text(
-              invoice.amountInWords ?? '',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-
-        _Section(
-          title: 'Seller Details',
-          icon: Icons.apartment_rounded,
-          children: [
-            _DetailRow(label: 'Company', value: invoice.companyNameSnapshot),
-            _optionalRow('Address 1', invoice.companyAddress1Snapshot),
-            _optionalRow('Address 2', invoice.companyAddress2Snapshot),
-            _optionalRow(
-              'Address 3',
-              _cleanAddress(invoice.companyAddress3Snapshot),
-            ),
-            _optionalRow('PAN', invoice.companyPanSnapshot),
-            _optionalRow('GSTIN', invoice.companyGstinSnapshot),
-          ],
+              _ItemsSection(items: detail.items, currency: currency),
+              _TaxSummary(invoice: invoice, currency: currency),
+              _InvoicePaymentCard(
+                invoiceId: invoice.id,
+                invoiceStatus: invoice.status,
+              ),
+              _Section(
+                title: 'Amount in Words',
+                icon: Icons.translate_rounded,
+                children: [
+                  Text(
+                    invoice.amountInWords ?? '',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              _Section(
+                title: 'Seller Details',
+                icon: Icons.apartment_rounded,
+                initiallyExpanded: false,
+                collapsedChild: _DetailRow(
+                  label: 'Company',
+                  value: invoice.companyNameSnapshot,
+                ),
+                children: [
+                  _DetailRow(
+                    label: 'Company',
+                    value: invoice.companyNameSnapshot,
+                  ),
+                  _optionalRow('Address 1', invoice.companyAddress1Snapshot),
+                  _optionalRow('Address 2', invoice.companyAddress2Snapshot),
+                  _optionalRow(
+                    'Address 3',
+                    _cleanAddress(invoice.companyAddress3Snapshot),
+                  ),
+                  _optionalRow('PAN', invoice.companyPanSnapshot),
+                  _optionalRow('GSTIN', invoice.companyGstinSnapshot),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -284,11 +333,9 @@ class _InvoiceDetailContent extends StatelessWidget {
 
     for (final piece in value.split(',')) {
       final text = piece.trim();
-
       if (text.isEmpty) {
         continue;
       }
-
       if (seen.add(text.toLowerCase())) {
         parts.add(text);
       }
@@ -314,6 +361,7 @@ class _HeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final status = invoice.status.toLowerCase();
 
     final statusLabel = switch (status) {
@@ -323,149 +371,113 @@ class _HeaderCard extends StatelessWidget {
     };
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.fromLTRB(15, 12, 15, 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryDark, AppTheme.primary],
+          colors: [
+            scheme.primary,
+            Color.lerp(scheme.primary, scheme.secondary, 0.60)!,
+          ],
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(17),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.18),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: scheme.primary.withValues(alpha: 0.13),
+            blurRadius: 16,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  invoice.invoiceNumber,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        invoice.invoiceNumber,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 9),
-
-          Row(
-            children: [
-              const Icon(
-                Icons.business_outlined,
-                color: Colors.white70,
-                size: 16,
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
+                const SizedBox(height: 4),
+                Text(
                   invoice.partyNameSnapshot,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.86),
-                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.80),
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-
-          const SizedBox(height: 24),
-
-          Row(
+          const SizedBox(width: 10),
+          Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Grand Total',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.68),
-                        fontSize: 11,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        currency.format(
-                          MoneyUtils.paiseToRupees(invoice.grandTotalPaise),
-                        ),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 29,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ],
+              Text(
+                'Grand Total',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.68),
+                  fontSize: 9,
                 ),
               ),
-
-              const SizedBox(width: 12),
-
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 11,
-                  vertical: 9,
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  currency.format(
+                    MoneyUtils.paiseToRupees(invoice.grandTotalPaise),
+                  ),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.11),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.calendar_month_outlined,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      DateFormat('dd MMM yyyy').format(invoice.invoiceDate),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                DateFormat('dd MMM yyyy').format(invoice.invoiceDate),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.78),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -540,13 +552,13 @@ class _ServiceDetailTile extends StatelessWidget {
                 height: 34,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppTheme.primarySoft,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(11),
                 ),
                 child: Text(
                   item.serialNo.toString().padLeft(2, '0'),
-                  style: const TextStyle(
-                    color: AppTheme.primary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                   ),
@@ -656,8 +668,28 @@ class _TaxSummary extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppTheme.brandNavy,
-        borderRadius: BorderRadius.circular(22),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Color.lerp(
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.secondary,
+              0.60,
+            )!,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.12),
+            blurRadius: 17,
+            offset: const Offset(0, 7),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -822,60 +854,101 @@ class _DarkInvoiceRow extends StatelessWidget {
   }
 }
 
-class _Section extends StatelessWidget {
+class _Section extends StatefulWidget {
   final String title;
   final IconData icon;
   final List<Widget> children;
+  final bool initiallyExpanded;
+  final Widget? collapsedChild;
 
   const _Section({
     required this.title,
     required this.icon,
     required this.children,
+    this.initiallyExpanded = true,
+    this.collapsedChild,
   });
 
   @override
+  State<_Section> createState() => _SectionState();
+}
+
+class _SectionState extends State<_Section> {
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.initiallyExpanded;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 11),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(
+          color: Color.lerp(AppTheme.border, scheme.primary, 0.07)!,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppTheme.primarySoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: AppTheme.primary, size: 19),
-              ),
-
-              const SizedBox(width: 11),
-
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppTheme.darkText,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: BorderRadius.circular(17),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: scheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(widget.icon, color: scheme.primary, size: 17),
                   ),
-                ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        color: AppTheme.darkText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: scheme.primary,
+                    size: 21,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-
-          const SizedBox(height: 16),
-
-          ...children,
+          if (!_expanded && widget.collapsedChild != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(13, 0, 13, 9),
+              child: widget.collapsedChild!,
+            ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(13, 0, 13, 13),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: widget.children,
+              ),
+            ),
         ],
       ),
     );
@@ -921,47 +994,65 @@ class _InvoicePdfActionsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: Color.lerp(AppTheme.border, scheme.primary, 0.07)!,
+        ),
       ),
       child: Row(
         children: [
           Expanded(
             child: _DocumentAction(
-              icon: Icons.picture_as_pdf_outlined,
+              icon: Icons.visibility_outlined,
               label: 'Preview',
               onTap: () {
                 context.push('/invoices/${detail.invoice.id}/pdf');
               },
             ),
           ),
-
-          const SizedBox(width: 8),
-
+          const SizedBox(width: 5),
           Expanded(
             child: _DocumentAction(
               icon: Icons.print_outlined,
               label: 'Print',
               onTap: () async {
-                await InvoicePdfActions.printOrSave(detail);
+                final includeHeader =
+                    await InvoicePdfActions.chooseCompanyHeaderMode(context);
+                if (includeHeader == null) {
+                  return;
+                }
+
+                await InvoicePdfActions.printOrSave(
+                  detail,
+                  includeCompanyHeader: includeHeader,
+                );
               },
             ),
           ),
-
-          const SizedBox(width: 8),
-
+          const SizedBox(width: 5),
           Expanded(
             child: _DocumentAction(
               icon: Icons.share_outlined,
               label: 'Share',
               primary: true,
               onTap: () async {
-                await InvoicePdfActions.share(detail);
+                final includeHeader =
+                    await InvoicePdfActions.chooseCompanyHeaderMode(context);
+                if (includeHeader == null) {
+                  return;
+                }
+
+                await InvoicePdfActions.share(
+                  detail,
+                  includeCompanyHeader: includeHeader,
+                );
               },
             ),
           ),
@@ -986,28 +1077,36 @@ class _DocumentAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final background = primary
+        ? scheme.primary
+        : scheme.primaryContainer.withValues(alpha: 0.55);
+
+    final foreground = primary ? Colors.white : scheme.primary;
+
     return Material(
-      color: primary ? AppTheme.primary : AppTheme.surfaceSoft,
-      borderRadius: BorderRadius.circular(14),
+      color: background,
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 13),
-          child: Column(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 9),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 20,
-                color: primary ? Colors.white : AppTheme.darkText,
-              ),
-              const SizedBox(height: 5),
-              Text(
-                label,
-                style: TextStyle(
-                  color: primary ? Colors.white : AppTheme.darkText,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+              Icon(icon, size: 17, color: foreground),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: foreground,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -1052,12 +1151,12 @@ class _InvoicePaymentCard extends ConsumerWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppTheme.primarySoft,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.account_balance_wallet_outlined,
-                  color: AppTheme.primary,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 19,
                 ),
               ),
@@ -1143,12 +1242,14 @@ class _InvoicePaymentCard extends ConsumerWidget {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: summary.outstandingPaise > 0
-                          ? AppTheme.primarySoft
+                          ? Theme.of(context).colorScheme.primaryContainer
                           : AppTheme.surfaceSoft,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: summary.outstandingPaise > 0
-                            ? AppTheme.primary.withValues(alpha: 0.18)
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.18)
                             : AppTheme.border,
                       ),
                     ),
@@ -1159,7 +1260,7 @@ class _InvoicePaymentCard extends ConsumerWidget {
                           height: 38,
                           decoration: BoxDecoration(
                             color: summary.outstandingPaise > 0
-                                ? AppTheme.primary
+                                ? Theme.of(context).colorScheme.primary
                                 : AppTheme.success,
                             borderRadius: BorderRadius.circular(12),
                           ),

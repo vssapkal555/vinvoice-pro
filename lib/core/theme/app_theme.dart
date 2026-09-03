@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'theme_controller.dart';
 
 class AppTheme {
   AppTheme._();
@@ -52,6 +53,260 @@ class AppTheme {
   // ================================================================
   // THEME
   // ================================================================
+
+  static ThemeData themeFor(VInvoiceTheme palette) {
+    final base = lightTheme;
+    final primaryAccent = palette.primary;
+    final secondaryAccent = palette.secondary;
+
+    final softCanvas = Color.lerp(background, palette.soft, 0.20)!;
+
+    final subtlePrimary = primaryAccent.withValues(alpha: 0.10);
+    final subtleSecondary = secondaryAccent.withValues(alpha: 0.10);
+
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: primaryAccent,
+          brightness: Brightness.light,
+          surface: surface,
+        ).copyWith(
+          primary: primaryAccent,
+          onPrimary: Colors.white,
+          primaryContainer: palette.soft,
+          onPrimaryContainer: darkText,
+          secondary: secondaryAccent,
+          onSecondary: Colors.white,
+          secondaryContainer: Color.lerp(palette.soft, surface, 0.30),
+          onSecondaryContainer: darkText,
+          tertiary: secondaryAccent,
+          onTertiary: Colors.white,
+          error: danger,
+          onError: Colors.white,
+          errorContainer: dangerSoft,
+          onErrorContainer: danger,
+          surface: surface,
+          onSurface: darkText,
+          surfaceContainerHighest: surfaceMuted,
+          onSurfaceVariant: secondaryText,
+          outline: borderStrong,
+          outlineVariant: border,
+          shadow: const Color(0x140F172A),
+          scrim: const Color(0x660F172A),
+          inverseSurface: brandNavy,
+          onInverseSurface: Colors.white,
+          inversePrimary: primaryAccent,
+        );
+
+    final themedInput = base.inputDecorationTheme.copyWith(
+      floatingLabelStyle: TextStyle(
+        color: primaryAccent,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: primaryAccent, width: 1.5),
+      ),
+    );
+
+    return base.copyWith(
+      colorScheme: scheme,
+      scaffoldBackgroundColor: softCanvas,
+      appBarTheme: base.appBarTheme.copyWith(
+        backgroundColor: softCanvas,
+        foregroundColor: darkText,
+        surfaceTintColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: darkText, size: 22),
+      ),
+      navigationBarTheme: base.navigationBarTheme.copyWith(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: palette.soft,
+        elevation: 0,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          return IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? primaryAccent
+                : secondaryText,
+          );
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          return TextStyle(
+            color: states.contains(WidgetState.selected)
+                ? primaryAccent
+                : secondaryText,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+            fontSize: 11,
+          );
+        }),
+      ),
+      cardTheme: base.cardTheme.copyWith(
+        color: surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: Color.lerp(border, primaryAccent, 0.08)!,
+            width: 1,
+          ),
+        ),
+      ),
+      listTileTheme: base.listTileTheme.copyWith(
+        iconColor: secondaryText,
+        textColor: darkText,
+        selectedColor: primaryAccent,
+        selectedTileColor: palette.soft.withValues(alpha: 0.70),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      dividerTheme: DividerThemeData(
+        color: Color.lerp(border, primaryAccent, 0.05),
+        thickness: 1,
+        space: 1,
+      ),
+      inputDecorationTheme: themedInput,
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          elevation: 0,
+          minimumSize: const Size(0, 50),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+          foregroundColor: Colors.white,
+          backgroundColor: primaryAccent,
+          disabledBackgroundColor: surfaceMuted,
+          disabledForegroundColor: tertiaryText,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primaryAccent,
+          side: BorderSide(color: primaryAccent.withValues(alpha: 0.35)),
+          minimumSize: const Size(0, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: primaryAccent,
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return tertiaryText;
+            }
+            return primaryAccent;
+          }),
+          overlayColor: WidgetStateProperty.all(subtlePrimary),
+        ),
+      ),
+      chipTheme: base.chipTheme.copyWith(
+        backgroundColor: surface,
+        selectedColor: palette.soft,
+        checkmarkColor: primaryAccent,
+        side: BorderSide(color: Color.lerp(border, primaryAccent, 0.12)!),
+        labelStyle: const TextStyle(
+          color: secondaryText,
+          fontWeight: FontWeight.w600,
+        ),
+        secondaryLabelStyle: TextStyle(
+          color: primaryAccent,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? primaryAccent
+              : Colors.transparent;
+        }),
+        checkColor: WidgetStateProperty.all(Colors.white),
+        side: const BorderSide(color: borderStrong),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? primaryAccent
+              : secondaryText;
+        }),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.all(Colors.white),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? primaryAccent
+              : borderStrong;
+        }),
+        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        shadowColor: darkText.withValues(alpha: 0.12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Color.lerp(border, primaryAccent, 0.08)!),
+        ),
+        textStyle: const TextStyle(
+          color: darkText,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        modalBackgroundColor: surface,
+        modalBarrierColor: darkText.withValues(alpha: 0.28),
+        showDragHandle: true,
+        dragHandleColor: Color.lerp(borderStrong, primaryAccent, 0.18),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 10,
+        shadowColor: darkText.withValues(alpha: 0.12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: primaryAccent,
+        linearTrackColor: subtleSecondary,
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: primaryAccent,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        focusElevation: 5,
+        hoverElevation: 5,
+        highlightElevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+      splashColor: subtlePrimary,
+      highlightColor: subtlePrimary,
+      focusColor: subtlePrimary,
+      hoverColor: subtlePrimary,
+    );
+  }
 
   static ThemeData get lightTheme {
     const colorScheme = ColorScheme(
