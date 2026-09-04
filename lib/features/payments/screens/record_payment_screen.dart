@@ -8,6 +8,7 @@ import '../../../core/utils/money_utils.dart';
 import '../../invoices/providers/invoice_list_providers.dart';
 import '../models/payment_models.dart';
 import '../providers/payment_providers.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 
 class RecordPaymentScreen extends ConsumerStatefulWidget {
   final String invoiceId;
@@ -57,6 +58,17 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
   }
 
   Future<void> _save(int outstandingPaise) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'record a payment',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     if (_saving || !_formKey.currentState!.validate()) {
       return;
     }

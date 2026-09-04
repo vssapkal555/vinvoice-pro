@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
 import '../models/report_date_range.dart';
@@ -108,77 +109,195 @@ class _InvoiceReportScreenState extends ConsumerState<InvoiceReportScreen> {
   }
 
   Future<void> _exportExcel(List<_InvoiceReportRow> rows) async {
+    final issuedRows =
+        rows
+            .where((row) => row.invoice.status.toLowerCase() == 'issued')
+            .toList()
+          ..sort((a, b) {
+            final companyCompare = a.invoice.companyNameSnapshot
+                .toLowerCase()
+                .compareTo(b.invoice.companyNameSnapshot.toLowerCase());
+            if (companyCompare != 0) {
+              return companyCompare;
+            }
+
+            final partyCompare = a.invoice.partyNameSnapshot
+                .toLowerCase()
+                .compareTo(b.invoice.partyNameSnapshot.toLowerCase());
+            if (partyCompare != 0) {
+              return partyCompare;
+            }
+
+            final dateCompare = a.invoice.invoiceDate.compareTo(
+              b.invoice.invoiceDate,
+            );
+            if (dateCompare != 0) {
+              return dateCompare;
+            }
+
+            return a.invoice.invoiceNumber.compareTo(b.invoice.invoiceNumber);
+          });
+
+    if (issuedRows.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No issued invoices available to export.'),
+        ),
+      );
+      return;
+    }
+
     final period = widget.range.start == null || widget.range.end == null
         ? 'All Time'
         : '${DateFormat('dd MMM yyyy').format(widget.range.start!)} - '
               '${DateFormat('dd MMM yyyy').format(widget.range.end!)}';
 
-    final issuedRows = rows.where(
-      (row) => row.invoice.status.toLowerCase() == 'issued',
-    );
+    final db = ref.read(appDatabaseProvider);
+    final exportRows = <List<String>>[];
 
-    final totalInvoice = issuedRows.fold<int>(
+    for (final reportRow in issuedRows) {
+      final invoice = reportRow.invoice;
+      final items = await db.getInvoiceItemsByInvoice(invoice.id);
+
+      // Keep one complete row for every invoice line item.
+      // Common invoice/company/party/tax values are deliberately repeated.
+      final sourceItems = items.isEmpty ? <InvoiceItem?>[null] : items;
+
+      for (final item in sourceItems) {
+        exportRows.add([
+          invoice.companyNameSnapshot,
+          invoice.partyNameSnapshot,
+          invoice.partyAddress1Snapshot ?? '',
+          invoice.partyAddress2Snapshot ?? '',
+          invoice.partyAddress3Snapshot ?? '',
+          invoice.partyPanSnapshot ?? '',
+          invoice.partyGstinSnapshot ?? '',
+          invoice.invoiceNumber,
+          DateFormat('dd-MM-yyyy').format(invoice.invoiceDate),
+          invoice.poNumber ?? '',
+          invoice.vendorCodeSnapshot ?? '',
+          invoice.siteNameSnapshot ?? '',
+          invoice.serviceEntry ?? '',
+          invoice.serviceFrom == null
+              ? ''
+              : DateFormat('dd-MM-yyyy').format(invoice.serviceFrom!),
+          invoice.serviceTo == null
+              ? ''
+              : DateFormat('dd-MM-yyyy').format(invoice.serviceTo!),
+          item?.description ?? '',
+          item?.hsnSac ?? '',
+          item == null ? '' : item.quantity.toString(),
+          item?.unitCodeSnapshot ?? '',
+          item == null ? '' : MoneyUtils.paiseToRupeesText(item.ratePaise),
+          item == null ? '' : MoneyUtils.paiseToRupeesText(item.amountPaise),
+          MoneyUtils.paiseToRupeesText(invoice.taxableAmountPaise),
+          MoneyUtils.paiseToRupeesText(invoice.cgstAmountPaise),
+          MoneyUtils.paiseToRupeesText(invoice.sgstAmountPaise),
+          MoneyUtils.paiseToRupeesText(invoice.igstAmountPaise),
+          MoneyUtils.paiseToRupeesText(invoice.grandTotalPaise),
+        ]);
+      }
+    }
+
+    final totalTaxable = issuedRows.fold<int>(
+      0,
+      (sum, row) => sum + row.invoice.taxableAmountPaise,
+    );
+    final totalCgst = issuedRows.fold<int>(
+      0,
+      (sum, row) => sum + row.invoice.cgstAmountPaise,
+    );
+    final totalSgst = issuedRows.fold<int>(
+      0,
+      (sum, row) => sum + row.invoice.sgstAmountPaise,
+    );
+    final totalIgst = issuedRows.fold<int>(
+      0,
+      (sum, row) => sum + row.invoice.igstAmountPaise,
+    );
+    final totalGrand = issuedRows.fold<int>(
       0,
       (sum, row) => sum + row.invoice.grandTotalPaise,
     );
 
-    final totalPaid = issuedRows.fold<int>(
-      0,
-      (sum, row) => sum + row.paidPaise,
-    );
-
-    final totalOutstanding = issuedRows.fold<int>(
-      0,
-      (sum, row) => sum + row.outstandingPaise,
-    );
-
     try {
       await ReportExcelExportService.exportAndShare(
-        reportTitle: 'Invoice Report',
-        fileName: 'invoice_report',
+        reportTitle: 'Detailed Issued Invoice Export',
+        fileName: 'issued_invoice_details',
         metadata: [
           ['Report Period', period],
           ['Generated', DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())],
-          ['Invoice Status', _status],
-          ['Payment Status', _paymentStatus],
-          ['Search', _search.trim().isEmpty ? 'All' : _search.trim()],
+          ['Invoice Status', 'ISSUED ONLY'],
+          ['Order', 'Company > Party > Invoice'],
+          ['Structure', 'Every row contains complete invoice and item details'],
         ],
-        numericColumns: const {5, 6, 7},
+        numericColumns: const {17, 19, 20, 21, 22, 23, 24, 25},
         headers: const [
-          'Invoice No',
+          'Company Name',
+          'Party Name',
+          'Address-1',
+          'Address-2',
+          'Address-3',
+          'PAN',
+          'GST',
+          'Invoice No.',
           'Invoice Date',
-          'Party',
-          'Invoice Status',
-          'Payment Status',
-          'Grand Total',
-          'Paid',
-          'Outstanding',
+          'PO No.',
+          'Vendor Code',
+          'Site / Plant',
+          'Service Entry',
+          'Service From',
+          'Service To',
+          'DESCRIPTION OF SERVICE',
+          'HSN/SAC',
+          'QTY',
+          'UNIT',
+          'RATE',
+          'AMOUNT',
+          'TAXABLE AMOUNT',
+          'CGST - 9%',
+          'SGST - 9%',
+          'IGST - 18%',
+          'GRAND TOTAL',
         ],
-        rows: rows.map((row) {
-          return [
-            row.invoice.invoiceNumber,
-            DateFormat('dd-MM-yyyy').format(row.invoice.invoiceDate),
-            row.invoice.partyNameSnapshot,
-            row.invoice.status.toUpperCase(),
-            row.paymentStatus,
-            MoneyUtils.paiseToRupeesText(row.invoice.grandTotalPaise),
-            MoneyUtils.paiseToRupeesText(row.paidPaise),
-            MoneyUtils.paiseToRupeesText(row.outstandingPaise),
-          ];
-        }).toList(),
+        rows: exportRows,
         totalsRow: [
           'TOTAL',
           '',
           '',
           '',
           '',
-          MoneyUtils.paiseToRupeesText(totalInvoice),
-          MoneyUtils.paiseToRupeesText(totalPaid),
-          MoneyUtils.paiseToRupeesText(totalOutstanding),
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          MoneyUtils.paiseToRupeesText(totalTaxable),
+          MoneyUtils.paiseToRupeesText(totalCgst),
+          MoneyUtils.paiseToRupeesText(totalSgst),
+          MoneyUtils.paiseToRupeesText(totalIgst),
+          MoneyUtils.paiseToRupeesText(totalGrand),
         ],
       );
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(
         context,

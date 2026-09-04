@@ -6,6 +6,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../company/providers/company_providers.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 import '../providers/vendor_code_providers.dart';
 import '../widgets/master_data_ui.dart';
 
@@ -112,6 +113,16 @@ class _VendorCodesScreenState extends ConsumerState<VendorCodesScreen> {
                         active: record.isActive,
                         onTap: () => _openForm(context, vendorCode: record),
                         onActiveChanged: (value) async {
+                          if (!await requireEntitlementWriteAccess(
+                            context,
+                            ref,
+                            action: 'change a vendor code',
+                          )) {
+                            return;
+                          }
+                          if (!context.mounted) {
+                            return;
+                          }
                           await ref
                               .read(appDatabaseProvider)
                               .updateVendorCodeRecord(
@@ -133,6 +144,19 @@ class _VendorCodesScreenState extends ConsumerState<VendorCodesScreen> {
   }
 
   Future<void> _openForm(BuildContext context, {VendorCode? vendorCode}) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: vendorCode == null
+          ? 'create a vendor code'
+          : 'edit a vendor code',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     final company = await ref.read(primaryCompanyProvider.future);
 
     if (company == null || !context.mounted) return;
@@ -223,6 +247,19 @@ class _VendorCodeFormState extends ConsumerState<_VendorCodeForm> {
   }
 
   Future<void> _save() async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: widget.vendorCode == null
+          ? 'create a vendor code'
+          : 'edit a vendor code',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     if (_saving || !_formKey.currentState!.validate()) return;
 
     setState(() => _saving = true);

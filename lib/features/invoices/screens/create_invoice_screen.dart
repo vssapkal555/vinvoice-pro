@@ -12,6 +12,7 @@ import '../../../core/utils/money_utils.dart';
 import '../data/invoice_calculator.dart';
 import '../models/invoice_form_models.dart';
 import '../providers/invoice_form_data_provider.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 
 const _uuid = Uuid();
 
@@ -313,6 +314,17 @@ class _CreateInvoiceFormState extends ConsumerState<_CreateInvoiceForm> {
   }
 
   Future<void> _saveInvoice({required bool issue}) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: issue ? 'issue an invoice' : 'save an invoice draft',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     if (_saving) {
       return;
     }

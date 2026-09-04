@@ -14,6 +14,7 @@ import '../../invoices/providers/invoice_list_providers.dart';
 import '../data/company_logo_processor.dart';
 import '../data/signature_image_processor.dart';
 import '../providers/company_providers.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 
 class CompanyScreen extends ConsumerWidget {
   const CompanyScreen({this.createNew = false, super.key});
@@ -277,6 +278,17 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
   }
 
   Future<void> _save() async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: widget.company == null ? 'create a company' : 'edit a company',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     if (_saving) {
       return;
     }

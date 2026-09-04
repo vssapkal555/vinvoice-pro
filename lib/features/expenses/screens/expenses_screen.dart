@@ -7,6 +7,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../company/providers/company_providers.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 import '../providers/expense_providers.dart';
 
 class ExpensesScreen extends ConsumerStatefulWidget {
@@ -211,6 +212,17 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   }
 
   Future<void> _openExpenseForm({Expense? expense}) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: expense == null ? 'create an expense' : 'edit an expense',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -225,6 +237,17 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   }
 
   Future<void> _confirmDelete(Expense expense) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'delete an expense',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -572,6 +595,17 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
   }
 
   Future<void> _save() async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: widget.expense == null ? 'create an expense' : 'edit an expense',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }

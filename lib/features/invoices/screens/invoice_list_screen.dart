@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
 import '../../payments/providers/payment_providers.dart';
 import '../providers/invoice_list_providers.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 
 enum _InvoiceFilter { all, draft, issued, cancelled }
 
@@ -103,7 +104,21 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
     return SafeArea(
       child: Column(
         children: [
-          _Header(onNewInvoice: () => context.push('/invoices/new')),
+          _Header(
+            onNewInvoice: () async {
+              if (!await requireEntitlementWriteAccess(
+                context,
+                ref,
+                action: 'create an invoice',
+              )) {
+                return;
+              }
+              if (!context.mounted) {
+                return;
+              }
+              context.push('/invoices/new');
+            },
+          ),
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -242,7 +257,17 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                               onClearFilters: _hasFilters
                                   ? _clearFilters
                                   : null,
-                              onNewInvoice: () {
+                              onNewInvoice: () async {
+                                if (!await requireEntitlementWriteAccess(
+                                  context,
+                                  ref,
+                                  action: 'create an invoice',
+                                )) {
+                                  return;
+                                }
+                                if (!context.mounted) {
+                                  return;
+                                }
                                 context.push('/invoices/new');
                               },
                             )

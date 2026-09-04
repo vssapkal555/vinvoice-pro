@@ -7,6 +7,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../company/providers/company_providers.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 import '../providers/note_providers.dart';
 
 class NotesScreen extends ConsumerStatefulWidget {
@@ -151,6 +152,17 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   }
 
   Future<void> _togglePinned(Note note) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'change a note',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
     await ref
         .read(appDatabaseProvider)
         .updateNoteRecord(
@@ -163,6 +175,17 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   }
 
   Future<void> _confirmDelete(Note note) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'delete a note',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -198,6 +221,17 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   }
 
   Future<void> _openNoteForm(BuildContext context, {Note? note}) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: note == null ? 'create a note' : 'edit a note',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
     final company = await ref.read(primaryCompanyProvider.future);
 
     if (company == null || !context.mounted) {
@@ -546,6 +580,17 @@ class _NoteFormSheetState extends ConsumerState<_NoteFormSheet> {
   }
 
   Future<void> _save() async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: widget.note == null ? 'create a note' : 'edit a note',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
     if (_saving || !_formKey.currentState!.validate()) {
       return;
     }

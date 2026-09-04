@@ -11,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../../core/utils/money_utils.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 import '../../company/providers/company_providers.dart';
 import '../../expenses/providers/expense_providers.dart';
 import '../../invoices/providers/invoice_list_providers.dart';
@@ -237,26 +238,33 @@ class DashboardScreen extends ConsumerWidget {
 
                             const SizedBox(height: AppSpacing.md),
 
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _MiniMetric(
-                                    icon: Icons.receipt_long_outlined,
-                                    label: 'Active invoices',
-                                    value: '${activeInvoices.length}',
-                                    onTap: () => openAppShellTab(1),
-                                  ),
+                            Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 360,
                                 ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: _MiniMetric(
-                                    icon: Icons.business_outlined,
-                                    label: 'Parties',
-                                    value: '$partyCount',
-                                    onTap: () => openAppShellTab(2),
-                                  ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: _MiniMetric(
+                                        icon: Icons.receipt_long_outlined,
+                                        label: 'Active invoices',
+                                        value: '${activeInvoices.length}',
+                                        onTap: () => openAppShellTab(1),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Expanded(
+                                      child: _MiniMetric(
+                                        icon: Icons.business_outlined,
+                                        label: 'Parties',
+                                        value: '$partyCount',
+                                        onTap: () => openAppShellTab(2),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ],
                         );
@@ -273,7 +281,17 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.sm),
 
                   _QuickActions(
-                    onNewInvoice: () {
+                    onNewInvoice: () async {
+                      if (!await requireEntitlementWriteAccess(
+                        context,
+                        ref,
+                        action: 'create an invoice',
+                      )) {
+                        return;
+                      }
+                      if (!context.mounted) {
+                        return;
+                      }
                       context.push('/invoices/new');
                     },
                   ),
@@ -1552,6 +1570,7 @@ class _MiniMetric extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
                     width: 34,
@@ -1562,7 +1581,7 @@ class _MiniMetric extends StatelessWidget {
                     ),
                     child: Icon(icon, size: 17, color: scheme.primary),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Icon(
                     Icons.arrow_forward_rounded,
                     size: 16,
@@ -1571,33 +1590,28 @@ class _MiniMetric extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 9),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      height: 1,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.darkText,
-                    ),
-                  ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        height: 1.1,
-                        color: AppTheme.secondaryText,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+              Text(
+                value,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  height: 1,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.darkText,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  height: 1.1,
+                  color: AppTheme.secondaryText,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

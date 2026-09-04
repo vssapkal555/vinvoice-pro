@@ -40,6 +40,8 @@ class AccountEntitlement {
 
   bool get isActive => status == 'active';
 
+  bool get canWrite => !isExpired && (isTrial || isActive);
+
   bool get isExpired {
     if (status == 'expired' || status == 'cancelled' || status == 'suspended') {
       return true;

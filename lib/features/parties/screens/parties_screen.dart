@@ -6,6 +6,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../company/providers/company_providers.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 import '../providers/party_providers.dart';
 
 class PartiesScreen extends ConsumerStatefulWidget {
@@ -222,6 +223,17 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
   }
 
   Future<void> _setPartyActive(Party party, bool value) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'change a party',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     final db = ref.read(appDatabaseProvider);
 
     await db.updatePartyRecord(
@@ -236,6 +248,17 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
   }
 
   Future<void> _openPartyForm(BuildContext context, {Party? party}) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: party == null ? 'create a party' : 'edit a party',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     final company = await ref.read(primaryCompanyProvider.future);
 
     if (company == null || !context.mounted) {
@@ -708,6 +731,17 @@ class _PartyFormSheetState extends ConsumerState<_PartyFormSheet> {
   }
 
   Future<void> _save() async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: widget.party == null ? 'create a party' : 'edit a party',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     if (_saving) {
       return;
     }

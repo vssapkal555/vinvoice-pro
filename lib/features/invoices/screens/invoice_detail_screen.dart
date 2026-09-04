@@ -11,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
 import '../providers/invoice_list_providers.dart';
 import '../../pdf/data/invoice_pdf_actions.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 
 class InvoiceDetailScreen extends ConsumerWidget {
   final String invoiceId;
@@ -45,6 +46,21 @@ class InvoiceDetailScreen extends ConsumerWidget {
 
               return PopupMenuButton<String>(
                 onSelected: (value) async {
+                  if (value == 'edit' ||
+                      value == 'issue' ||
+                      value == 'cancel') {
+                    if (!await requireEntitlementWriteAccess(
+                      context,
+                      ref,
+                      action: 'change an invoice',
+                    )) {
+                      return;
+                    }
+                    if (!context.mounted) {
+                      return;
+                    }
+                  }
+
                   if (value == 'edit') {
                     await context.push('/invoices/$invoiceId/edit');
 

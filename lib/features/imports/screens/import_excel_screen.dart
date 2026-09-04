@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../company/providers/company_providers.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 import '../../invoices/providers/invoice_list_providers.dart';
 import '../data/invoice_excel_parser.dart';
 import '../data/invoice_import_service.dart';
@@ -34,6 +35,17 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
   String? _selectedFileName;
 
   Future<void> _pickFile() async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'import invoices from Excel',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
     if (_reading || _importing) return;
 
     setState(() {
@@ -99,6 +111,17 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
   }
 
   Future<void> _import() async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'import invoices from Excel',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
     final preview = _preview;
 
     if (preview == null || _importing) return;

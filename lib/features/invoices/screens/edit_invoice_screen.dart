@@ -13,6 +13,7 @@ import '../../../core/utils/money_utils.dart';
 import '../data/invoice_calculator.dart';
 import '../models/invoice_form_models.dart';
 import '../providers/edit_invoice_provider.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 import '../providers/invoice_list_providers.dart';
 
 const _editUuid = Uuid();
@@ -369,6 +370,17 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
   }
 
   Future<void> _save() async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'edit an invoice',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     if (_saving) return;
 
     if (!_formKey.currentState!.validate()) {

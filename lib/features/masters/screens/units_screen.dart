@@ -6,6 +6,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../company/providers/company_providers.dart';
+import '../../auth/providers/entitlement_write_guard.dart';
 import '../providers/unit_providers.dart';
 import '../widgets/master_data_ui.dart';
 
@@ -109,6 +110,16 @@ class _UnitsScreenState extends ConsumerState<UnitsScreen> {
                         active: record.isActive,
                         onTap: () => _openForm(context, unit: record),
                         onActiveChanged: (value) async {
+                          if (!await requireEntitlementWriteAccess(
+                            context,
+                            ref,
+                            action: 'change a unit',
+                          )) {
+                            return;
+                          }
+                          if (!context.mounted) {
+                            return;
+                          }
                           await ref
                               .read(appDatabaseProvider)
                               .updateUnitRecord(
@@ -130,6 +141,17 @@ class _UnitsScreenState extends ConsumerState<UnitsScreen> {
   }
 
   Future<void> _openForm(BuildContext context, {Unit? unit}) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: unit == null ? 'create a unit' : 'edit a unit',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     final company = await ref.read(primaryCompanyProvider.future);
 
     if (company == null || !context.mounted) return;
@@ -181,6 +203,17 @@ class _UnitFormState extends ConsumerState<_UnitForm> {
   }
 
   Future<void> _save() async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: widget.unit == null ? 'create a unit' : 'edit a unit',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     if (_saving || !_formKey.currentState!.validate()) return;
 
     setState(() => _saving = true);
