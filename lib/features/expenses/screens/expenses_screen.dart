@@ -708,9 +708,15 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final bottomSafeArea = MediaQuery.viewPaddingOf(context).bottom;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 4, 20, bottomInset + 20),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        4,
+        20,
+        bottomInset + bottomSafeArea + 24,
+      ),
       child: SingleChildScrollView(
         child: Form(
           key: _formKey,

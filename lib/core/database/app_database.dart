@@ -63,11 +63,47 @@ class Companies extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+class CustomerMasters extends Table {
+  TextColumn get id => text().clientDefault(() => _uuid.v4())();
+
+  TextColumn get ownerUserId => text()();
+
+  TextColumn get partyName => text()();
+
+  TextColumn get address1 => text().nullable()();
+  TextColumn get address2 => text().nullable()();
+  TextColumn get address3 => text().nullable()();
+
+  TextColumn get city => text().nullable()();
+  TextColumn get state => text().nullable()();
+  TextColumn get pincode => text().nullable()();
+
+  TextColumn get pan => text().nullable()();
+  TextColumn get gstin => text().nullable()();
+
+  TextColumn get phone => text().nullable()();
+  TextColumn get email => text().nullable()();
+
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+
+  DateTimeColumn get createdAt => dateTime().clientDefault(DateTime.now)();
+  DateTimeColumn get updatedAt => dateTime().clientDefault(DateTime.now)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 class Parties extends Table {
   TextColumn get id => text().clientDefault(() => _uuid.v4())();
 
   TextColumn get companyId =>
       text().references(Companies, #id, onDelete: KeyAction.cascade)();
+
+  TextColumn get customerMasterId => text().nullable().references(
+    CustomerMasters,
+    #id,
+    onDelete: KeyAction.setNull,
+  )();
 
   TextColumn get partyName => text()();
 
@@ -430,6 +466,7 @@ class ImportBatches extends Table {
 @DriftDatabase(
   tables: [
     Companies,
+    CustomerMasters,
     Parties,
     VendorCodes,
     Sites,
@@ -446,8 +483,10 @@ class ImportBatches extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  AppDatabase.forTesting(super.executor);
+
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -455,6 +494,59 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 9) {
+        await m.createTable(customerMasters);
+        await m.addColumn(parties, parties.customerMasterId);
+
+        final existingParties = await select(parties).get();
+
+        for (final party in existingParties) {
+          final company =
+              await (select(companies)
+                    ..where((row) => row.id.equals(party.companyId))
+                    ..limit(1))
+                  .getSingleOrNull();
+
+          final ownerUserId = company?.ownerUserId?.trim();
+
+          if (ownerUserId == null || ownerUserId.isEmpty) {
+            continue;
+          }
+
+          var master = await findCustomerMasterForOwner(
+            ownerUserId: ownerUserId,
+            gstin: party.gstin,
+            pan: party.pan,
+            partyName: party.partyName,
+          );
+
+          master ??= await _insertCustomerMaster(
+            ownerUserId: ownerUserId,
+            partyName: party.partyName,
+            address1: party.address1,
+            address2: party.address2,
+            address3: party.address3,
+            city: party.city,
+            state: party.state,
+            pincode: party.pincode,
+            pan: party.pan,
+            gstin: party.gstin,
+            phone: party.phone,
+            email: party.email,
+          );
+
+          await (update(parties)..where((row) => row.id.equals(party.id)))
+              .write(PartiesCompanion(customerMasterId: Value(master.id)));
+        }
+
+        await customStatement('''
+          CREATE UNIQUE INDEX IF NOT EXISTS
+          parties_company_customer_master_unique
+          ON parties(company_id, customer_master_id)
+          WHERE customer_master_id IS NOT NULL
+        ''');
+      }
+
       if (from < 8) {
         await m.addColumn(companies, companies.logoImage);
         await m.addColumn(invoices, invoices.companyLogoSnapshot);
@@ -533,6 +625,13 @@ class AppDatabase extends _$AppDatabase {
     },
     beforeOpen: (OpeningDetails details) async {
       await customStatement('PRAGMA foreign_keys = ON');
+
+      await customStatement('''
+        CREATE UNIQUE INDEX IF NOT EXISTS
+        parties_company_customer_master_unique
+        ON parties(company_id, customer_master_id)
+        WHERE customer_master_id IS NOT NULL
+      ''');
 
       await _seedDefaultUnits();
       await _seedDefaultTaxRates();
@@ -823,6 +922,348 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<CustomerMaster?> findCustomerMasterForOwner({
+    required String ownerUserId,
+    String? gstin,
+    String? pan,
+    required String partyName,
+  }) async {
+    final all =
+        await (select(customerMasters)..where(
+              (row) =>
+                  row.ownerUserId.equals(ownerUserId) &
+                  row.isActive.equals(true),
+            ))
+            .get();
+
+    final gst = (gstin ?? '').trim().toUpperCase();
+    if (gst.isNotEmpty) {
+      for (final master in all) {
+        if ((master.gstin ?? '').trim().toUpperCase() == gst) {
+          return master;
+        }
+      }
+    }
+
+    final panValue = (pan ?? '').trim().toUpperCase();
+    if (panValue.isNotEmpty) {
+      for (final master in all) {
+        if ((master.pan ?? '').trim().toUpperCase() == panValue) {
+          return master;
+        }
+      }
+    }
+
+    final name = partyName.trim().toLowerCase();
+    for (final master in all) {
+      if (master.partyName.trim().toLowerCase() == name) {
+        return master;
+      }
+    }
+
+    return null;
+  }
+
+  Future<Company> _requireCompanyOwnedBy({
+    required String companyId,
+    required String ownerUserId,
+  }) async {
+    final company =
+        await (select(companies)
+              ..where((row) => row.id.equals(companyId))
+              ..limit(1))
+            .getSingleOrNull();
+
+    if (company == null) {
+      throw StateError('Company not found.');
+    }
+
+    final actualOwner = company.ownerUserId?.trim();
+    if (actualOwner == null ||
+        actualOwner.isEmpty ||
+        actualOwner != ownerUserId.trim()) {
+      throw StateError('Company does not belong to the current user.');
+    }
+
+    return company;
+  }
+
+  Future<List<CustomerMaster>> getAvailableCustomerMastersForCompany({
+    required String ownerUserId,
+    required String companyId,
+  }) async {
+    await _requireCompanyOwnedBy(
+      companyId: companyId,
+      ownerUserId: ownerUserId,
+    );
+
+    final masters =
+        await (select(customerMasters)
+              ..where(
+                (row) =>
+                    row.ownerUserId.equals(ownerUserId) &
+                    row.isActive.equals(true),
+              )
+              ..orderBy([(row) => OrderingTerm.asc(row.partyName)]))
+            .get();
+
+    final linked =
+        await (select(parties)..where(
+              (row) =>
+                  row.companyId.equals(companyId) &
+                  row.customerMasterId.isNotNull(),
+            ))
+            .get();
+
+    final linkedIds = linked
+        .map((party) => party.customerMasterId)
+        .whereType<String>()
+        .toSet();
+
+    return masters.where((master) => !linkedIds.contains(master.id)).toList();
+  }
+
+  Future<CustomerMaster> _insertCustomerMaster({
+    required String ownerUserId,
+    required String partyName,
+    String? address1,
+    String? address2,
+    String? address3,
+    String? city,
+    String? state,
+    String? pincode,
+    String? pan,
+    String? gstin,
+    String? phone,
+    String? email,
+  }) async {
+    final id = const Uuid().v4();
+
+    await into(customerMasters).insert(
+      CustomerMastersCompanion.insert(
+        id: Value(id),
+        ownerUserId: ownerUserId,
+        partyName: partyName.trim(),
+        address1: Value(_nullableImportText(address1)),
+        address2: Value(_nullableImportText(address2)),
+        address3: Value(_nullableImportText(address3)),
+        city: Value(_nullableImportText(city)),
+        state: Value(_nullableImportText(state)),
+        pincode: Value(_nullableImportText(pincode)),
+        pan: Value(_nullableImportText(pan?.toUpperCase())),
+        gstin: Value(_nullableImportText(gstin?.toUpperCase())),
+        phone: Value(_nullableImportText(phone)),
+        email: Value(_nullableImportText(email?.toLowerCase())),
+        isActive: const Value(true),
+      ),
+    );
+
+    return (select(
+      customerMasters,
+    )..where((row) => row.id.equals(id))).getSingle();
+  }
+
+  Future<Party> linkCustomerMasterToCompany({
+    required String companyId,
+    required String customerMasterId,
+  }) async {
+    final company =
+        await (select(companies)
+              ..where((row) => row.id.equals(companyId))
+              ..limit(1))
+            .getSingleOrNull();
+    if (company == null) {
+      throw StateError('Company not found.');
+    }
+
+    final master =
+        await (select(customerMasters)
+              ..where((row) => row.id.equals(customerMasterId))
+              ..limit(1))
+            .getSingleOrNull();
+    if (master == null) {
+      throw StateError('Customer master not found.');
+    }
+
+    final companyOwner = company.ownerUserId?.trim();
+    final customerOwner = master.ownerUserId.trim();
+    if (companyOwner == null ||
+        companyOwner.isEmpty ||
+        companyOwner != customerOwner) {
+      throw StateError(
+        'Customer and company must belong to the same signed-in user.',
+      );
+    }
+
+    final existing =
+        await (select(parties)
+              ..where(
+                (row) =>
+                    row.companyId.equals(companyId) &
+                    row.customerMasterId.equals(customerMasterId),
+              )
+              ..limit(1))
+            .get();
+
+    if (existing.isNotEmpty) {
+      return existing.first;
+    }
+
+    final id = const Uuid().v4();
+
+    await into(parties).insert(
+      PartiesCompanion.insert(
+        id: Value(id),
+        companyId: companyId,
+        customerMasterId: Value(master.id),
+        partyName: master.partyName,
+        address1: Value(master.address1),
+        address2: Value(master.address2),
+        address3: Value(master.address3),
+        city: Value(master.city),
+        state: Value(master.state),
+        pincode: Value(master.pincode),
+        pan: Value(master.pan),
+        gstin: Value(master.gstin),
+        phone: Value(master.phone),
+        email: Value(master.email),
+        isActive: const Value(true),
+      ),
+    );
+
+    return (select(parties)..where((row) => row.id.equals(id))).getSingle();
+  }
+
+  Future<Party> createCustomerMasterAndLink({
+    required String companyId,
+    required String ownerUserId,
+    required String partyName,
+    String? address1,
+    String? address2,
+    String? address3,
+    String? city,
+    String? state,
+    String? pincode,
+    String? pan,
+    String? gstin,
+    String? phone,
+    String? email,
+  }) async {
+    await _requireCompanyOwnedBy(
+      companyId: companyId,
+      ownerUserId: ownerUserId,
+    );
+
+    var master = await findCustomerMasterForOwner(
+      ownerUserId: ownerUserId,
+      gstin: gstin,
+      pan: pan,
+      partyName: partyName,
+    );
+
+    master ??= await _insertCustomerMaster(
+      ownerUserId: ownerUserId,
+      partyName: partyName,
+      address1: address1,
+      address2: address2,
+      address3: address3,
+      city: city,
+      state: state,
+      pincode: pincode,
+      pan: pan,
+      gstin: gstin,
+      phone: phone,
+      email: email,
+    );
+
+    return linkCustomerMasterToCompany(
+      companyId: companyId,
+      customerMasterId: master.id,
+    );
+  }
+
+  Future<void> updatePartyAndCustomerMaster({
+    required String partyId,
+    required String partyName,
+    String? address1,
+    String? address2,
+    String? address3,
+    String? city,
+    String? state,
+    String? pincode,
+    String? pan,
+    String? gstin,
+    String? phone,
+    String? email,
+  }) async {
+    final party = await (select(
+      parties,
+    )..where((row) => row.id.equals(partyId))).getSingle();
+
+    final now = DateTime.now();
+
+    await transaction(() async {
+      final masterId = party.customerMasterId;
+
+      if (masterId != null) {
+        await (update(
+          customerMasters,
+        )..where((row) => row.id.equals(masterId))).write(
+          CustomerMastersCompanion(
+            partyName: Value(partyName.trim()),
+            address1: Value(_nullableImportText(address1)),
+            address2: Value(_nullableImportText(address2)),
+            address3: Value(_nullableImportText(address3)),
+            city: Value(_nullableImportText(city)),
+            state: Value(_nullableImportText(state)),
+            pincode: Value(_nullableImportText(pincode)),
+            pan: Value(_nullableImportText(pan?.toUpperCase())),
+            gstin: Value(_nullableImportText(gstin?.toUpperCase())),
+            phone: Value(_nullableImportText(phone)),
+            email: Value(_nullableImportText(email?.toLowerCase())),
+            updatedAt: Value(now),
+          ),
+        );
+
+        await (update(
+          parties,
+        )..where((row) => row.customerMasterId.equals(masterId))).write(
+          PartiesCompanion(
+            partyName: Value(partyName.trim()),
+            address1: Value(_nullableImportText(address1)),
+            address2: Value(_nullableImportText(address2)),
+            address3: Value(_nullableImportText(address3)),
+            city: Value(_nullableImportText(city)),
+            state: Value(_nullableImportText(state)),
+            pincode: Value(_nullableImportText(pincode)),
+            pan: Value(_nullableImportText(pan?.toUpperCase())),
+            gstin: Value(_nullableImportText(gstin?.toUpperCase())),
+            phone: Value(_nullableImportText(phone)),
+            email: Value(_nullableImportText(email?.toLowerCase())),
+            updatedAt: Value(now),
+          ),
+        );
+      } else {
+        await (update(parties)..where((row) => row.id.equals(partyId))).write(
+          PartiesCompanion(
+            partyName: Value(partyName.trim()),
+            address1: Value(_nullableImportText(address1)),
+            address2: Value(_nullableImportText(address2)),
+            address3: Value(_nullableImportText(address3)),
+            city: Value(_nullableImportText(city)),
+            state: Value(_nullableImportText(state)),
+            pincode: Value(_nullableImportText(pincode)),
+            pan: Value(_nullableImportText(pan?.toUpperCase())),
+            gstin: Value(_nullableImportText(gstin?.toUpperCase())),
+            phone: Value(_nullableImportText(phone)),
+            email: Value(_nullableImportText(email?.toLowerCase())),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+    });
+  }
+
   Future<List<Party>> getPartiesForCompany(String companyId) {
     return (select(parties)
           ..where((row) => row.companyId.equals(companyId))
@@ -1101,6 +1542,22 @@ class AppDatabase extends _$AppDatabase {
     return rows.isEmpty ? null : rows.first;
   }
 
+  Future<Invoice?> getInvoiceByIdForCompany({
+    required String invoiceId,
+    required String companyId,
+  }) async {
+    final rows =
+        await (select(invoices)
+              ..where(
+                (row) =>
+                    row.id.equals(invoiceId) & row.companyId.equals(companyId),
+              )
+              ..limit(1))
+            .get();
+
+    return rows.isEmpty ? null : rows.first;
+  }
+
   Future<List<InvoiceItem>> getInvoiceItemsByInvoice(String invoiceId) {
     return (select(invoiceItems)
           ..where((row) => row.invoiceId.equals(invoiceId))
@@ -1171,23 +1628,44 @@ class AppDatabase extends _$AppDatabase {
     String? pan,
     String? gstin,
   }) async {
-    final id = const Uuid().v4();
+    final company =
+        await (select(companies)
+              ..where((row) => row.id.equals(companyId))
+              ..limit(1))
+            .getSingle();
 
-    await into(parties).insert(
-      PartiesCompanion.insert(
-        id: Value(id),
-        companyId: companyId,
-        partyName: partyName.trim(),
-        address1: Value(_nullableImportText(address1)),
-        address2: Value(_nullableImportText(address2)),
-        address3: Value(_nullableImportText(address3)),
-        pan: Value(_nullableImportText(pan?.toUpperCase())),
-        gstin: Value(_nullableImportText(gstin?.toUpperCase())),
-        isActive: const Value(true),
-      ),
+    final ownerUserId = company.ownerUserId?.trim();
+
+    if (ownerUserId == null || ownerUserId.isEmpty) {
+      final id = const Uuid().v4();
+
+      await into(parties).insert(
+        PartiesCompanion.insert(
+          id: Value(id),
+          companyId: companyId,
+          partyName: partyName.trim(),
+          address1: Value(_nullableImportText(address1)),
+          address2: Value(_nullableImportText(address2)),
+          address3: Value(_nullableImportText(address3)),
+          pan: Value(_nullableImportText(pan?.toUpperCase())),
+          gstin: Value(_nullableImportText(gstin?.toUpperCase())),
+          isActive: const Value(true),
+        ),
+      );
+
+      return (select(parties)..where((row) => row.id.equals(id))).getSingle();
+    }
+
+    return createCustomerMasterAndLink(
+      companyId: companyId,
+      ownerUserId: ownerUserId,
+      partyName: partyName,
+      address1: address1,
+      address2: address2,
+      address3: address3,
+      pan: pan,
+      gstin: gstin,
     );
-
-    return (select(parties)..where((row) => row.id.equals(id))).getSingle();
   }
 
   static String? _nullableImportText(String? value) {
@@ -1479,6 +1957,77 @@ class AppDatabase extends _$AppDatabase {
     }
 
     return null;
+  }
+
+  Future<VendorCode?> findVendorCodeForImport({
+    required String companyId,
+    required String partyId,
+  }) async {
+    final rows =
+        await (select(vendorCodes)
+              ..where(
+                (row) =>
+                    row.companyId.equals(companyId) &
+                    row.partyId.equals(partyId),
+              )
+              ..limit(1))
+            .get();
+    return rows.isEmpty ? null : rows.first;
+  }
+
+  Future<Site?> findSiteForImport({
+    required String companyId,
+    required String partyId,
+    required String siteName,
+  }) async {
+    final target = siteName.trim().toLowerCase();
+    if (target.isEmpty) return null;
+    final rows =
+        await (select(sites)..where(
+              (row) =>
+                  row.companyId.equals(companyId) & row.partyId.equals(partyId),
+            ))
+            .get();
+    for (final site in rows) {
+      if (site.siteName.trim().toLowerCase() == target) return site;
+    }
+    return null;
+  }
+
+  Future<VendorCode> createVendorCodeFromImport({
+    required String companyId,
+    required String partyId,
+    required String vendorCode,
+  }) async {
+    final id = const Uuid().v4();
+    await into(vendorCodes).insert(
+      VendorCodesCompanion.insert(
+        id: Value(id),
+        companyId: companyId,
+        partyId: Value(partyId),
+        vendorCode: vendorCode.trim(),
+        isActive: const Value(true),
+      ),
+    );
+    return (select(vendorCodes)..where((row) => row.id.equals(id))).getSingle();
+  }
+
+  Future<Site> createSiteFromImport({
+    required String companyId,
+    required String partyId,
+    required String siteName,
+  }) async {
+    final id = const Uuid().v4();
+    await into(sites).insert(
+      SitesCompanion.insert(
+        id: Value(id),
+        companyId: companyId,
+        partyId: Value(partyId),
+        siteName: siteName.trim(),
+        isActive: const Value(true),
+      ),
+    );
+    return (select(sites)..where((row) => row.id.equals(id))).getSingle();
   }
 
   Future<Unit?> findUnitForImport({

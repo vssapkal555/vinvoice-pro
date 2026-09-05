@@ -67,28 +67,10 @@ class _SetupPage extends ConsumerWidget {
         number: 1,
         title: 'Create your company profile',
         description:
-            'Add the business identity and address that will appear on your invoices.',
+            'Add your business identity and address. Customers and vendor codes can be added later when you need them.',
         button: 'Create Company',
         route: '/company/new',
         icon: Icons.apartment_rounded,
-      ),
-      SetupStep.party => const _StepConfig(
-        number: 2,
-        title: 'Add your first customer',
-        description:
-            'Each customer / party belongs to the currently selected company.',
-        button: 'Add Customer / Party',
-        route: '/parties',
-        icon: Icons.business_rounded,
-      ),
-      SetupStep.vendorCode => const _StepConfig(
-        number: 3,
-        title: 'Map the vendor code',
-        description:
-            'Choose the customer and enter the single vendor code for this company + customer relationship.',
-        button: 'Create Vendor Code',
-        route: '/vendor-codes',
-        icon: Icons.numbers_rounded,
       ),
       SetupStep.complete => throw StateError('Complete setup should show app.'),
     };
@@ -128,7 +110,7 @@ class _SetupPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'STEP ${config.number} OF 3',
+                      'STEP ${config.number} OF 1',
                       style: const TextStyle(
                         color: AppTheme.primary,
                         fontSize: 11,
@@ -167,7 +149,7 @@ class _SetupPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Complete this step and return here. VInvoice Pro will automatically continue to the next required setup step.',
+                      'After creating your company, VInvoice Pro opens the dashboard. Add customers, vendor codes and sites only when you need them.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppTheme.secondaryText,

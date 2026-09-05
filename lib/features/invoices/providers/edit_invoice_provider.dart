@@ -38,10 +38,13 @@ final editInvoiceProvider = FutureProvider.family<EditInvoiceData, String>((
     throw StateError('Company profile is not configured.');
   }
 
-  final invoice = await db.getInvoiceById(invoiceId);
+  final invoice = await db.getInvoiceByIdForCompany(
+    invoiceId: invoiceId,
+    companyId: company.id,
+  );
 
   if (invoice == null) {
-    throw StateError('Invoice not found.');
+    throw StateError('Invoice not found for the selected company.');
   }
 
   final status = invoice.status.toLowerCase();

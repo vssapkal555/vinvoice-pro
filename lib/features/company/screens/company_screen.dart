@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/contact_validators.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../invoices/providers/invoice_list_providers.dart';
 import '../data/company_logo_processor.dart';
@@ -89,7 +90,11 @@ class CompanyScreen extends ConsumerWidget {
         ],
       ),
       body: createNew
-          ? _CompanyForm(company: null, ownerUserId: user.id)
+          ? _CompanyForm(
+              key: const ValueKey('__new_company__'),
+              company: null,
+              ownerUserId: user.id,
+            )
           : companyAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => _CompanyError(
@@ -99,8 +104,11 @@ class CompanyScreen extends ConsumerWidget {
                   ref.invalidate(primaryCompanyProvider);
                 },
               ),
-              data: (company) =>
-                  _CompanyForm(company: company, ownerUserId: user.id),
+              data: (company) => _CompanyForm(
+                key: ValueKey(company?.id ?? '__no_company__'),
+                company: company,
+                ownerUserId: user.id,
+              ),
             ),
     );
   }
@@ -110,7 +118,11 @@ class _CompanyForm extends ConsumerStatefulWidget {
   final Company? company;
   final String ownerUserId;
 
-  const _CompanyForm({required this.company, required this.ownerUserId});
+  const _CompanyForm({
+    required this.company,
+    required this.ownerUserId,
+    super.key,
+  });
 
   @override
   ConsumerState<_CompanyForm> createState() => _CompanyFormState();
@@ -189,6 +201,39 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
     _signatoryDesignation = TextEditingController(
       text: widget.company?.signatoryDesignation ?? '',
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant _CompanyForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.company?.id == widget.company?.id) {
+      return;
+    }
+
+    final company = widget.company;
+
+    _companyName.text = company?.companyName ?? '';
+    _address1.text = company?.address1 ?? '';
+    _address2.text = company?.address2 ?? '';
+    _address3.text = company?.address3 ?? '';
+    _city.text = company?.city ?? '';
+    _state.text = company?.state ?? '';
+    _pincode.text = company?.pincode ?? '';
+    _pan.text = company?.pan ?? '';
+    _gstin.text = company?.gstin ?? '';
+    _phone.text = company?.phone ?? '';
+    _email.text = company?.email ?? '';
+    _customPrefix.text = company?.customInvoicePrefix ?? '';
+    _customSeries.text = company?.customInvoiceSeries ?? '0001';
+    _signatoryName.text = company?.signatoryName ?? '';
+    _signatoryDesignation.text = company?.signatoryDesignation ?? '';
+
+    _invoiceNumberMode = company?.invoiceNumberMode ?? 'standard';
+    _applySignature = company?.applySignature ?? false;
+    _applySignatureToHistorical = company?.applySignatureToHistorical ?? false;
+    _signatureImage = company?.signatureImage;
+    _logoImage = company?.logoImage;
   }
 
   @override
@@ -342,8 +387,8 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             pincode: Value(_pincode.text.trim()),
             pan: Value(_pan.text.trim().toUpperCase()),
             gstin: Value(_gstin.text.trim().toUpperCase()),
-            phone: Value(_phone.text.trim()),
-            email: Value(_email.text.trim()),
+            phone: Value(ContactValidators.normalizeIndianMobile(_phone.text)),
+            email: Value(ContactValidators.normalizeEmail(_email.text)),
             logoImage: Value(_logoImage),
             invoiceNumberMode: Value(_invoiceNumberMode),
             customInvoicePrefix: Value(
@@ -391,8 +436,8 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             pincode: Value(_pincode.text.trim()),
             pan: Value(_pan.text.trim().toUpperCase()),
             gstin: Value(_gstin.text.trim().toUpperCase()),
-            phone: Value(_phone.text.trim()),
-            email: Value(_email.text.trim()),
+            phone: Value(ContactValidators.normalizeIndianMobile(_phone.text)),
+            email: Value(ContactValidators.normalizeEmail(_email.text)),
             logoImage: Value(_logoImage),
             invoiceNumberMode: Value(_invoiceNumberMode),
             customInvoicePrefix: Value(
@@ -449,6 +494,10 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             duration: Duration(milliseconds: 900),
           ),
         );
+
+        if (Navigator.of(context).canPop()) {
+          context.pop();
+        }
       }
     } catch (error) {
       if (!mounted) {
@@ -660,6 +709,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
                           labelText: 'Phone',
                           prefixIcon: Icon(Icons.phone_outlined),
                         ),
+                        validator: ContactValidators.indianMobile,
                       );
 
                       final email = TextFormField(
@@ -669,6 +719,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
                           labelText: 'Email',
                           prefixIcon: Icon(Icons.email_outlined),
                         ),
+                        validator: ContactValidators.email,
                       );
 
                       if (!twoColumns) {

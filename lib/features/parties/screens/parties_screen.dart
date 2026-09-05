@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/contact_validators.dart';
 import '../../company/providers/company_providers.dart';
 import '../../auth/providers/entitlement_write_guard.dart';
 import '../providers/party_providers.dart';
@@ -74,7 +75,7 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                   active: activeCount,
                   inactive: inactiveCount,
                   onAdd: () {
-                    _openPartyForm(context);
+                    _openAddPartyOptions(context);
                   },
                 ),
               ),
@@ -147,7 +148,7 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                       if (parties.isEmpty)
                         _EmptyParties(
                           onAdd: () {
-                            _openPartyForm(context);
+                            _openAddPartyOptions(context);
                           },
                         )
                       else if (filtered.isEmpty)
@@ -247,6 +248,149 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
     ref.invalidate(partiesProvider);
   }
 
+  Future<void> _openAddPartyOptions(BuildContext context) async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'add a customer',
+    )) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+
+    final company = await ref.read(primaryCompanyProvider.future);
+    if (company == null || !context.mounted) {
+      return;
+    }
+
+    final ownerUserId = company.ownerUserId?.trim();
+    final db = ref.read(appDatabaseProvider);
+
+    final available = ownerUserId == null || ownerUserId.isEmpty
+        ? const <CustomerMaster>[]
+        : await db.getAvailableCustomerMastersForCompany(
+            ownerUserId: ownerUserId,
+            companyId: company.id,
+          );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    if (available.isEmpty) {
+      await _openPartyForm(context);
+      return;
+    }
+
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: AppTheme.surface,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Add Customer / Party',
+                style: TextStyle(
+                  color: AppTheme.darkText,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Reuse a customer already saved in your account, or create a new customer.',
+                style: TextStyle(
+                  color: AppTheme.secondaryText,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(sheetContext, 'existing'),
+                icon: const Icon(Icons.person_search_rounded),
+                label: const Text('Use Existing Customer'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.pop(sheetContext, 'new'),
+                icon: const Icon(Icons.person_add_alt_1_rounded),
+                label: const Text('Create New Customer'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    if (action == 'existing') {
+      await _openExistingCustomerPicker(
+        context,
+        companyId: company.id,
+        customers: available,
+      );
+    } else if (action == 'new') {
+      await _openPartyForm(context);
+    }
+  }
+
+  Future<void> _openExistingCustomerPicker(
+    BuildContext context, {
+    required String companyId,
+    required List<CustomerMaster> customers,
+  }) async {
+    final selected = await showModalBottomSheet<CustomerMaster>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppTheme.surface,
+      builder: (sheetContext) {
+        return _ExistingCustomerSheet(customers: customers);
+      },
+    );
+
+    if (selected == null || !context.mounted) {
+      return;
+    }
+
+    try {
+      final db = ref.read(appDatabaseProvider);
+      await db.linkCustomerMasterToCompany(
+        companyId: companyId,
+        customerMasterId: selected.id,
+      );
+
+      ref.invalidate(partiesProvider);
+
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${selected.partyName} added to this company.')),
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to link customer.\n$error')),
+      );
+    }
+  }
+
   Future<void> _openPartyForm(BuildContext context, {Party? party}) async {
     if (!await requireEntitlementWriteAccess(
       context,
@@ -271,7 +415,11 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
       useSafeArea: true,
       backgroundColor: AppTheme.surface,
       builder: (context) {
-        return _PartyFormSheet(companyId: company.id, party: party);
+        return _PartyFormSheet(
+          companyId: company.id,
+          ownerUserId: company.ownerUserId,
+          party: party,
+        );
       },
     );
 
@@ -661,14 +809,128 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
+class _ExistingCustomerSheet extends StatefulWidget {
+  const _ExistingCustomerSheet({required this.customers});
+
+  final List<CustomerMaster> customers;
+
+  @override
+  State<_ExistingCustomerSheet> createState() => _ExistingCustomerSheetState();
+}
+
+class _ExistingCustomerSheetState extends State<_ExistingCustomerSheet> {
+  final _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _query.trim().toLowerCase();
+    final filtered = widget.customers.where((customer) {
+      if (query.isEmpty) {
+        return true;
+      }
+
+      return customer.partyName.toLowerCase().contains(query) ||
+          (customer.gstin ?? '').toLowerCase().contains(query) ||
+          (customer.pan ?? '').toLowerCase().contains(query) ||
+          (customer.phone ?? '').toLowerCase().contains(query);
+    }).toList();
+
+    return FractionallySizedBox(
+      heightFactor: 0.82,
+      child: Scaffold(
+        backgroundColor: AppTheme.background,
+        appBar: AppBar(title: const Text('Use Existing Customer')),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                controller: _search,
+                decoration: const InputDecoration(
+                  hintText: 'Search name, GSTIN, PAN or mobile',
+                  prefixIcon: Icon(Icons.search_rounded),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _query = value;
+                  });
+                },
+              ),
+            ),
+            Expanded(
+              child: filtered.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No reusable customers found.',
+                        style: TextStyle(color: AppTheme.secondaryText),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final customer = filtered[index];
+
+                        return Card(
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.business_outlined),
+                            ),
+                            title: Text(
+                              customer.partyName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              [
+                                if ((customer.gstin ?? '').trim().isNotEmpty)
+                                  'GSTIN ${customer.gstin}',
+                                if ((customer.pan ?? '').trim().isNotEmpty)
+                                  'PAN ${customer.pan}',
+                                if ((customer.phone ?? '').trim().isNotEmpty)
+                                  customer.phone!,
+                              ].join('  •  '),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: const Icon(
+                              Icons.add_circle_outline_rounded,
+                            ),
+                            onTap: () => Navigator.pop(context, customer),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ============================================================================
 // PARTY FORM
 // ============================================================================
 
 class _PartyFormSheet extends ConsumerStatefulWidget {
-  const _PartyFormSheet({required this.companyId, this.party});
+  const _PartyFormSheet({
+    required this.companyId,
+    required this.ownerUserId,
+    this.party,
+  });
 
   final String companyId;
+  final String? ownerUserId;
   final Party? party;
 
   @override
@@ -756,41 +1018,60 @@ class _PartyFormSheetState extends ConsumerState<_PartyFormSheet> {
 
     try {
       final db = ref.read(appDatabaseProvider);
+      final phone = ContactValidators.normalizeIndianMobile(_phone.text);
+      final email = ContactValidators.normalizeEmail(_email.text);
 
       if (!_editing) {
-        await db.insertPartyRecord(
-          PartiesCompanion.insert(
+        final ownerUserId = widget.ownerUserId?.trim();
+
+        if (ownerUserId == null || ownerUserId.isEmpty) {
+          await db.insertPartyRecord(
+            PartiesCompanion.insert(
+              companyId: widget.companyId,
+              partyName: _name.text.trim(),
+              address1: Value(_address1.text.trim()),
+              address2: Value(_address2.text.trim()),
+              address3: Value(_address3.text.trim()),
+              city: Value(_city.text.trim()),
+              state: Value(_state.text.trim()),
+              pincode: Value(_pincode.text.trim()),
+              pan: Value(_pan.text.trim().toUpperCase()),
+              gstin: Value(_gstin.text.trim().toUpperCase()),
+              phone: Value(phone),
+              email: Value(email),
+            ),
+          );
+        } else {
+          await db.createCustomerMasterAndLink(
             companyId: widget.companyId,
+            ownerUserId: ownerUserId,
             partyName: _name.text.trim(),
-            address1: Value(_address1.text.trim()),
-            address2: Value(_address2.text.trim()),
-            address3: Value(_address3.text.trim()),
-            city: Value(_city.text.trim()),
-            state: Value(_state.text.trim()),
-            pincode: Value(_pincode.text.trim()),
-            pan: Value(_pan.text.trim().toUpperCase()),
-            gstin: Value(_gstin.text.trim().toUpperCase()),
-            phone: Value(_phone.text.trim()),
-            email: Value(_email.text.trim()),
-          ),
-        );
+            address1: _address1.text,
+            address2: _address2.text,
+            address3: _address3.text,
+            city: _city.text,
+            state: _state.text,
+            pincode: _pincode.text,
+            pan: _pan.text,
+            gstin: _gstin.text,
+            phone: phone,
+            email: email,
+          );
+        }
       } else {
-        await db.updatePartyRecord(
-          PartiesCompanion(
-            id: Value(widget.party!.id),
-            partyName: Value(_name.text.trim()),
-            address1: Value(_address1.text.trim()),
-            address2: Value(_address2.text.trim()),
-            address3: Value(_address3.text.trim()),
-            city: Value(_city.text.trim()),
-            state: Value(_state.text.trim()),
-            pincode: Value(_pincode.text.trim()),
-            pan: Value(_pan.text.trim().toUpperCase()),
-            gstin: Value(_gstin.text.trim().toUpperCase()),
-            phone: Value(_phone.text.trim()),
-            email: Value(_email.text.trim()),
-            updatedAt: Value(DateTime.now()),
-          ),
+        await db.updatePartyAndCustomerMaster(
+          partyId: widget.party!.id,
+          partyName: _name.text.trim(),
+          address1: _address1.text,
+          address2: _address2.text,
+          address3: _address3.text,
+          city: _city.text,
+          state: _state.text,
+          pincode: _pincode.text,
+          pan: _pan.text,
+          gstin: _gstin.text,
+          phone: phone,
+          email: email,
         );
       }
 
@@ -1009,6 +1290,7 @@ class _PartyFormSheetState extends ConsumerState<_PartyFormSheet> {
                               labelText: 'Phone',
                               prefixIcon: Icon(Icons.phone_outlined),
                             ),
+                            validator: ContactValidators.indianMobile,
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
@@ -1018,6 +1300,7 @@ class _PartyFormSheetState extends ConsumerState<_PartyFormSheet> {
                               labelText: 'Email',
                               prefixIcon: Icon(Icons.email_outlined),
                             ),
+                            validator: ContactValidators.email,
                           ),
                         ],
                       ),

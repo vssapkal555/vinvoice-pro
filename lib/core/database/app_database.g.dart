@@ -1469,6 +1469,896 @@ class CompaniesCompanion extends UpdateCompanion<Company> {
   }
 }
 
+class $CustomerMastersTable extends CustomerMasters
+    with TableInfo<$CustomerMastersTable, CustomerMaster> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CustomerMastersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: () => _uuid.v4(),
+  );
+  static const VerificationMeta _ownerUserIdMeta = const VerificationMeta(
+    'ownerUserId',
+  );
+  @override
+  late final GeneratedColumn<String> ownerUserId = GeneratedColumn<String>(
+    'owner_user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _partyNameMeta = const VerificationMeta(
+    'partyName',
+  );
+  @override
+  late final GeneratedColumn<String> partyName = GeneratedColumn<String>(
+    'party_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _address1Meta = const VerificationMeta(
+    'address1',
+  );
+  @override
+  late final GeneratedColumn<String> address1 = GeneratedColumn<String>(
+    'address1',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _address2Meta = const VerificationMeta(
+    'address2',
+  );
+  @override
+  late final GeneratedColumn<String> address2 = GeneratedColumn<String>(
+    'address2',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _address3Meta = const VerificationMeta(
+    'address3',
+  );
+  @override
+  late final GeneratedColumn<String> address3 = GeneratedColumn<String>(
+    'address3',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cityMeta = const VerificationMeta('city');
+  @override
+  late final GeneratedColumn<String> city = GeneratedColumn<String>(
+    'city',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pincodeMeta = const VerificationMeta(
+    'pincode',
+  );
+  @override
+  late final GeneratedColumn<String> pincode = GeneratedColumn<String>(
+    'pincode',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _panMeta = const VerificationMeta('pan');
+  @override
+  late final GeneratedColumn<String> pan = GeneratedColumn<String>(
+    'pan',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _gstinMeta = const VerificationMeta('gstin');
+  @override
+  late final GeneratedColumn<String> gstin = GeneratedColumn<String>(
+    'gstin',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _phoneMeta = const VerificationMeta('phone');
+  @override
+  late final GeneratedColumn<String> phone = GeneratedColumn<String>(
+    'phone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _emailMeta = const VerificationMeta('email');
+  @override
+  late final GeneratedColumn<String> email = GeneratedColumn<String>(
+    'email',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: DateTime.now,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: DateTime.now,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    ownerUserId,
+    partyName,
+    address1,
+    address2,
+    address3,
+    city,
+    state,
+    pincode,
+    pan,
+    gstin,
+    phone,
+    email,
+    isActive,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'customer_masters';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CustomerMaster> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('owner_user_id')) {
+      context.handle(
+        _ownerUserIdMeta,
+        ownerUserId.isAcceptableOrUnknown(
+          data['owner_user_id']!,
+          _ownerUserIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerUserIdMeta);
+    }
+    if (data.containsKey('party_name')) {
+      context.handle(
+        _partyNameMeta,
+        partyName.isAcceptableOrUnknown(data['party_name']!, _partyNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_partyNameMeta);
+    }
+    if (data.containsKey('address1')) {
+      context.handle(
+        _address1Meta,
+        address1.isAcceptableOrUnknown(data['address1']!, _address1Meta),
+      );
+    }
+    if (data.containsKey('address2')) {
+      context.handle(
+        _address2Meta,
+        address2.isAcceptableOrUnknown(data['address2']!, _address2Meta),
+      );
+    }
+    if (data.containsKey('address3')) {
+      context.handle(
+        _address3Meta,
+        address3.isAcceptableOrUnknown(data['address3']!, _address3Meta),
+      );
+    }
+    if (data.containsKey('city')) {
+      context.handle(
+        _cityMeta,
+        city.isAcceptableOrUnknown(data['city']!, _cityMeta),
+      );
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    }
+    if (data.containsKey('pincode')) {
+      context.handle(
+        _pincodeMeta,
+        pincode.isAcceptableOrUnknown(data['pincode']!, _pincodeMeta),
+      );
+    }
+    if (data.containsKey('pan')) {
+      context.handle(
+        _panMeta,
+        pan.isAcceptableOrUnknown(data['pan']!, _panMeta),
+      );
+    }
+    if (data.containsKey('gstin')) {
+      context.handle(
+        _gstinMeta,
+        gstin.isAcceptableOrUnknown(data['gstin']!, _gstinMeta),
+      );
+    }
+    if (data.containsKey('phone')) {
+      context.handle(
+        _phoneMeta,
+        phone.isAcceptableOrUnknown(data['phone']!, _phoneMeta),
+      );
+    }
+    if (data.containsKey('email')) {
+      context.handle(
+        _emailMeta,
+        email.isAcceptableOrUnknown(data['email']!, _emailMeta),
+      );
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CustomerMaster map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CustomerMaster(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      ownerUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_user_id'],
+      )!,
+      partyName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}party_name'],
+      )!,
+      address1: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}address1'],
+      ),
+      address2: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}address2'],
+      ),
+      address3: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}address3'],
+      ),
+      city: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}city'],
+      ),
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      ),
+      pincode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pincode'],
+      ),
+      pan: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pan'],
+      ),
+      gstin: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gstin'],
+      ),
+      phone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}phone'],
+      ),
+      email: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}email'],
+      ),
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CustomerMastersTable createAlias(String alias) {
+    return $CustomerMastersTable(attachedDatabase, alias);
+  }
+}
+
+class CustomerMaster extends DataClass implements Insertable<CustomerMaster> {
+  final String id;
+  final String ownerUserId;
+  final String partyName;
+  final String? address1;
+  final String? address2;
+  final String? address3;
+  final String? city;
+  final String? state;
+  final String? pincode;
+  final String? pan;
+  final String? gstin;
+  final String? phone;
+  final String? email;
+  final bool isActive;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const CustomerMaster({
+    required this.id,
+    required this.ownerUserId,
+    required this.partyName,
+    this.address1,
+    this.address2,
+    this.address3,
+    this.city,
+    this.state,
+    this.pincode,
+    this.pan,
+    this.gstin,
+    this.phone,
+    this.email,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['owner_user_id'] = Variable<String>(ownerUserId);
+    map['party_name'] = Variable<String>(partyName);
+    if (!nullToAbsent || address1 != null) {
+      map['address1'] = Variable<String>(address1);
+    }
+    if (!nullToAbsent || address2 != null) {
+      map['address2'] = Variable<String>(address2);
+    }
+    if (!nullToAbsent || address3 != null) {
+      map['address3'] = Variable<String>(address3);
+    }
+    if (!nullToAbsent || city != null) {
+      map['city'] = Variable<String>(city);
+    }
+    if (!nullToAbsent || state != null) {
+      map['state'] = Variable<String>(state);
+    }
+    if (!nullToAbsent || pincode != null) {
+      map['pincode'] = Variable<String>(pincode);
+    }
+    if (!nullToAbsent || pan != null) {
+      map['pan'] = Variable<String>(pan);
+    }
+    if (!nullToAbsent || gstin != null) {
+      map['gstin'] = Variable<String>(gstin);
+    }
+    if (!nullToAbsent || phone != null) {
+      map['phone'] = Variable<String>(phone);
+    }
+    if (!nullToAbsent || email != null) {
+      map['email'] = Variable<String>(email);
+    }
+    map['is_active'] = Variable<bool>(isActive);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  CustomerMastersCompanion toCompanion(bool nullToAbsent) {
+    return CustomerMastersCompanion(
+      id: Value(id),
+      ownerUserId: Value(ownerUserId),
+      partyName: Value(partyName),
+      address1: address1 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(address1),
+      address2: address2 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(address2),
+      address3: address3 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(address3),
+      city: city == null && nullToAbsent ? const Value.absent() : Value(city),
+      state: state == null && nullToAbsent
+          ? const Value.absent()
+          : Value(state),
+      pincode: pincode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pincode),
+      pan: pan == null && nullToAbsent ? const Value.absent() : Value(pan),
+      gstin: gstin == null && nullToAbsent
+          ? const Value.absent()
+          : Value(gstin),
+      phone: phone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(phone),
+      email: email == null && nullToAbsent
+          ? const Value.absent()
+          : Value(email),
+      isActive: Value(isActive),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory CustomerMaster.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CustomerMaster(
+      id: serializer.fromJson<String>(json['id']),
+      ownerUserId: serializer.fromJson<String>(json['ownerUserId']),
+      partyName: serializer.fromJson<String>(json['partyName']),
+      address1: serializer.fromJson<String?>(json['address1']),
+      address2: serializer.fromJson<String?>(json['address2']),
+      address3: serializer.fromJson<String?>(json['address3']),
+      city: serializer.fromJson<String?>(json['city']),
+      state: serializer.fromJson<String?>(json['state']),
+      pincode: serializer.fromJson<String?>(json['pincode']),
+      pan: serializer.fromJson<String?>(json['pan']),
+      gstin: serializer.fromJson<String?>(json['gstin']),
+      phone: serializer.fromJson<String?>(json['phone']),
+      email: serializer.fromJson<String?>(json['email']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'ownerUserId': serializer.toJson<String>(ownerUserId),
+      'partyName': serializer.toJson<String>(partyName),
+      'address1': serializer.toJson<String?>(address1),
+      'address2': serializer.toJson<String?>(address2),
+      'address3': serializer.toJson<String?>(address3),
+      'city': serializer.toJson<String?>(city),
+      'state': serializer.toJson<String?>(state),
+      'pincode': serializer.toJson<String?>(pincode),
+      'pan': serializer.toJson<String?>(pan),
+      'gstin': serializer.toJson<String?>(gstin),
+      'phone': serializer.toJson<String?>(phone),
+      'email': serializer.toJson<String?>(email),
+      'isActive': serializer.toJson<bool>(isActive),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  CustomerMaster copyWith({
+    String? id,
+    String? ownerUserId,
+    String? partyName,
+    Value<String?> address1 = const Value.absent(),
+    Value<String?> address2 = const Value.absent(),
+    Value<String?> address3 = const Value.absent(),
+    Value<String?> city = const Value.absent(),
+    Value<String?> state = const Value.absent(),
+    Value<String?> pincode = const Value.absent(),
+    Value<String?> pan = const Value.absent(),
+    Value<String?> gstin = const Value.absent(),
+    Value<String?> phone = const Value.absent(),
+    Value<String?> email = const Value.absent(),
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => CustomerMaster(
+    id: id ?? this.id,
+    ownerUserId: ownerUserId ?? this.ownerUserId,
+    partyName: partyName ?? this.partyName,
+    address1: address1.present ? address1.value : this.address1,
+    address2: address2.present ? address2.value : this.address2,
+    address3: address3.present ? address3.value : this.address3,
+    city: city.present ? city.value : this.city,
+    state: state.present ? state.value : this.state,
+    pincode: pincode.present ? pincode.value : this.pincode,
+    pan: pan.present ? pan.value : this.pan,
+    gstin: gstin.present ? gstin.value : this.gstin,
+    phone: phone.present ? phone.value : this.phone,
+    email: email.present ? email.value : this.email,
+    isActive: isActive ?? this.isActive,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  CustomerMaster copyWithCompanion(CustomerMastersCompanion data) {
+    return CustomerMaster(
+      id: data.id.present ? data.id.value : this.id,
+      ownerUserId: data.ownerUserId.present
+          ? data.ownerUserId.value
+          : this.ownerUserId,
+      partyName: data.partyName.present ? data.partyName.value : this.partyName,
+      address1: data.address1.present ? data.address1.value : this.address1,
+      address2: data.address2.present ? data.address2.value : this.address2,
+      address3: data.address3.present ? data.address3.value : this.address3,
+      city: data.city.present ? data.city.value : this.city,
+      state: data.state.present ? data.state.value : this.state,
+      pincode: data.pincode.present ? data.pincode.value : this.pincode,
+      pan: data.pan.present ? data.pan.value : this.pan,
+      gstin: data.gstin.present ? data.gstin.value : this.gstin,
+      phone: data.phone.present ? data.phone.value : this.phone,
+      email: data.email.present ? data.email.value : this.email,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CustomerMaster(')
+          ..write('id: $id, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('partyName: $partyName, ')
+          ..write('address1: $address1, ')
+          ..write('address2: $address2, ')
+          ..write('address3: $address3, ')
+          ..write('city: $city, ')
+          ..write('state: $state, ')
+          ..write('pincode: $pincode, ')
+          ..write('pan: $pan, ')
+          ..write('gstin: $gstin, ')
+          ..write('phone: $phone, ')
+          ..write('email: $email, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    ownerUserId,
+    partyName,
+    address1,
+    address2,
+    address3,
+    city,
+    state,
+    pincode,
+    pan,
+    gstin,
+    phone,
+    email,
+    isActive,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CustomerMaster &&
+          other.id == this.id &&
+          other.ownerUserId == this.ownerUserId &&
+          other.partyName == this.partyName &&
+          other.address1 == this.address1 &&
+          other.address2 == this.address2 &&
+          other.address3 == this.address3 &&
+          other.city == this.city &&
+          other.state == this.state &&
+          other.pincode == this.pincode &&
+          other.pan == this.pan &&
+          other.gstin == this.gstin &&
+          other.phone == this.phone &&
+          other.email == this.email &&
+          other.isActive == this.isActive &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class CustomerMastersCompanion extends UpdateCompanion<CustomerMaster> {
+  final Value<String> id;
+  final Value<String> ownerUserId;
+  final Value<String> partyName;
+  final Value<String?> address1;
+  final Value<String?> address2;
+  final Value<String?> address3;
+  final Value<String?> city;
+  final Value<String?> state;
+  final Value<String?> pincode;
+  final Value<String?> pan;
+  final Value<String?> gstin;
+  final Value<String?> phone;
+  final Value<String?> email;
+  final Value<bool> isActive;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const CustomerMastersCompanion({
+    this.id = const Value.absent(),
+    this.ownerUserId = const Value.absent(),
+    this.partyName = const Value.absent(),
+    this.address1 = const Value.absent(),
+    this.address2 = const Value.absent(),
+    this.address3 = const Value.absent(),
+    this.city = const Value.absent(),
+    this.state = const Value.absent(),
+    this.pincode = const Value.absent(),
+    this.pan = const Value.absent(),
+    this.gstin = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.email = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CustomerMastersCompanion.insert({
+    this.id = const Value.absent(),
+    required String ownerUserId,
+    required String partyName,
+    this.address1 = const Value.absent(),
+    this.address2 = const Value.absent(),
+    this.address3 = const Value.absent(),
+    this.city = const Value.absent(),
+    this.state = const Value.absent(),
+    this.pincode = const Value.absent(),
+    this.pan = const Value.absent(),
+    this.gstin = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.email = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerUserId = Value(ownerUserId),
+       partyName = Value(partyName);
+  static Insertable<CustomerMaster> custom({
+    Expression<String>? id,
+    Expression<String>? ownerUserId,
+    Expression<String>? partyName,
+    Expression<String>? address1,
+    Expression<String>? address2,
+    Expression<String>? address3,
+    Expression<String>? city,
+    Expression<String>? state,
+    Expression<String>? pincode,
+    Expression<String>? pan,
+    Expression<String>? gstin,
+    Expression<String>? phone,
+    Expression<String>? email,
+    Expression<bool>? isActive,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (partyName != null) 'party_name': partyName,
+      if (address1 != null) 'address1': address1,
+      if (address2 != null) 'address2': address2,
+      if (address3 != null) 'address3': address3,
+      if (city != null) 'city': city,
+      if (state != null) 'state': state,
+      if (pincode != null) 'pincode': pincode,
+      if (pan != null) 'pan': pan,
+      if (gstin != null) 'gstin': gstin,
+      if (phone != null) 'phone': phone,
+      if (email != null) 'email': email,
+      if (isActive != null) 'is_active': isActive,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CustomerMastersCompanion copyWith({
+    Value<String>? id,
+    Value<String>? ownerUserId,
+    Value<String>? partyName,
+    Value<String?>? address1,
+    Value<String?>? address2,
+    Value<String?>? address3,
+    Value<String?>? city,
+    Value<String?>? state,
+    Value<String?>? pincode,
+    Value<String?>? pan,
+    Value<String?>? gstin,
+    Value<String?>? phone,
+    Value<String?>? email,
+    Value<bool>? isActive,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return CustomerMastersCompanion(
+      id: id ?? this.id,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      partyName: partyName ?? this.partyName,
+      address1: address1 ?? this.address1,
+      address2: address2 ?? this.address2,
+      address3: address3 ?? this.address3,
+      city: city ?? this.city,
+      state: state ?? this.state,
+      pincode: pincode ?? this.pincode,
+      pan: pan ?? this.pan,
+      gstin: gstin ?? this.gstin,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (ownerUserId.present) {
+      map['owner_user_id'] = Variable<String>(ownerUserId.value);
+    }
+    if (partyName.present) {
+      map['party_name'] = Variable<String>(partyName.value);
+    }
+    if (address1.present) {
+      map['address1'] = Variable<String>(address1.value);
+    }
+    if (address2.present) {
+      map['address2'] = Variable<String>(address2.value);
+    }
+    if (address3.present) {
+      map['address3'] = Variable<String>(address3.value);
+    }
+    if (city.present) {
+      map['city'] = Variable<String>(city.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (pincode.present) {
+      map['pincode'] = Variable<String>(pincode.value);
+    }
+    if (pan.present) {
+      map['pan'] = Variable<String>(pan.value);
+    }
+    if (gstin.present) {
+      map['gstin'] = Variable<String>(gstin.value);
+    }
+    if (phone.present) {
+      map['phone'] = Variable<String>(phone.value);
+    }
+    if (email.present) {
+      map['email'] = Variable<String>(email.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CustomerMastersCompanion(')
+          ..write('id: $id, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('partyName: $partyName, ')
+          ..write('address1: $address1, ')
+          ..write('address2: $address2, ')
+          ..write('address3: $address3, ')
+          ..write('city: $city, ')
+          ..write('state: $state, ')
+          ..write('pincode: $pincode, ')
+          ..write('pan: $pan, ')
+          ..write('gstin: $gstin, ')
+          ..write('phone: $phone, ')
+          ..write('email: $email, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PartiesTable extends Parties with TableInfo<$PartiesTable, Party> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -1496,6 +2386,20 @@ class $PartiesTable extends Parties with TableInfo<$PartiesTable, Party> {
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'REFERENCES companies (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _customerMasterIdMeta = const VerificationMeta(
+    'customerMasterId',
+  );
+  @override
+  late final GeneratedColumn<String> customerMasterId = GeneratedColumn<String>(
+    'customer_master_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES customer_masters (id) ON DELETE SET NULL',
     ),
   );
   static const VerificationMeta _partyNameMeta = const VerificationMeta(
@@ -1650,6 +2554,7 @@ class $PartiesTable extends Parties with TableInfo<$PartiesTable, Party> {
   List<GeneratedColumn> get $columns => [
     id,
     companyId,
+    customerMasterId,
     partyName,
     address1,
     address2,
@@ -1687,6 +2592,15 @@ class $PartiesTable extends Parties with TableInfo<$PartiesTable, Party> {
       );
     } else if (isInserting) {
       context.missing(_companyIdMeta);
+    }
+    if (data.containsKey('customer_master_id')) {
+      context.handle(
+        _customerMasterIdMeta,
+        customerMasterId.isAcceptableOrUnknown(
+          data['customer_master_id']!,
+          _customerMasterIdMeta,
+        ),
+      );
     }
     if (data.containsKey('party_name')) {
       context.handle(
@@ -1791,6 +2705,10 @@ class $PartiesTable extends Parties with TableInfo<$PartiesTable, Party> {
         DriftSqlType.string,
         data['${effectivePrefix}company_id'],
       )!,
+      customerMasterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}customer_master_id'],
+      ),
       partyName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}party_name'],
@@ -1859,6 +2777,7 @@ class $PartiesTable extends Parties with TableInfo<$PartiesTable, Party> {
 class Party extends DataClass implements Insertable<Party> {
   final String id;
   final String companyId;
+  final String? customerMasterId;
   final String partyName;
   final String? address1;
   final String? address2;
@@ -1876,6 +2795,7 @@ class Party extends DataClass implements Insertable<Party> {
   const Party({
     required this.id,
     required this.companyId,
+    this.customerMasterId,
     required this.partyName,
     this.address1,
     this.address2,
@@ -1896,6 +2816,9 @@ class Party extends DataClass implements Insertable<Party> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['company_id'] = Variable<String>(companyId);
+    if (!nullToAbsent || customerMasterId != null) {
+      map['customer_master_id'] = Variable<String>(customerMasterId);
+    }
     map['party_name'] = Variable<String>(partyName);
     if (!nullToAbsent || address1 != null) {
       map['address1'] = Variable<String>(address1);
@@ -1937,6 +2860,9 @@ class Party extends DataClass implements Insertable<Party> {
     return PartiesCompanion(
       id: Value(id),
       companyId: Value(companyId),
+      customerMasterId: customerMasterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customerMasterId),
       partyName: Value(partyName),
       address1: address1 == null && nullToAbsent
           ? const Value.absent()
@@ -1978,6 +2904,7 @@ class Party extends DataClass implements Insertable<Party> {
     return Party(
       id: serializer.fromJson<String>(json['id']),
       companyId: serializer.fromJson<String>(json['companyId']),
+      customerMasterId: serializer.fromJson<String?>(json['customerMasterId']),
       partyName: serializer.fromJson<String>(json['partyName']),
       address1: serializer.fromJson<String?>(json['address1']),
       address2: serializer.fromJson<String?>(json['address2']),
@@ -2000,6 +2927,7 @@ class Party extends DataClass implements Insertable<Party> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'companyId': serializer.toJson<String>(companyId),
+      'customerMasterId': serializer.toJson<String?>(customerMasterId),
       'partyName': serializer.toJson<String>(partyName),
       'address1': serializer.toJson<String?>(address1),
       'address2': serializer.toJson<String?>(address2),
@@ -2020,6 +2948,7 @@ class Party extends DataClass implements Insertable<Party> {
   Party copyWith({
     String? id,
     String? companyId,
+    Value<String?> customerMasterId = const Value.absent(),
     String? partyName,
     Value<String?> address1 = const Value.absent(),
     Value<String?> address2 = const Value.absent(),
@@ -2037,6 +2966,9 @@ class Party extends DataClass implements Insertable<Party> {
   }) => Party(
     id: id ?? this.id,
     companyId: companyId ?? this.companyId,
+    customerMasterId: customerMasterId.present
+        ? customerMasterId.value
+        : this.customerMasterId,
     partyName: partyName ?? this.partyName,
     address1: address1.present ? address1.value : this.address1,
     address2: address2.present ? address2.value : this.address2,
@@ -2056,6 +2988,9 @@ class Party extends DataClass implements Insertable<Party> {
     return Party(
       id: data.id.present ? data.id.value : this.id,
       companyId: data.companyId.present ? data.companyId.value : this.companyId,
+      customerMasterId: data.customerMasterId.present
+          ? data.customerMasterId.value
+          : this.customerMasterId,
       partyName: data.partyName.present ? data.partyName.value : this.partyName,
       address1: data.address1.present ? data.address1.value : this.address1,
       address2: data.address2.present ? data.address2.value : this.address2,
@@ -2078,6 +3013,7 @@ class Party extends DataClass implements Insertable<Party> {
     return (StringBuffer('Party(')
           ..write('id: $id, ')
           ..write('companyId: $companyId, ')
+          ..write('customerMasterId: $customerMasterId, ')
           ..write('partyName: $partyName, ')
           ..write('address1: $address1, ')
           ..write('address2: $address2, ')
@@ -2100,6 +3036,7 @@ class Party extends DataClass implements Insertable<Party> {
   int get hashCode => Object.hash(
     id,
     companyId,
+    customerMasterId,
     partyName,
     address1,
     address2,
@@ -2121,6 +3058,7 @@ class Party extends DataClass implements Insertable<Party> {
       (other is Party &&
           other.id == this.id &&
           other.companyId == this.companyId &&
+          other.customerMasterId == this.customerMasterId &&
           other.partyName == this.partyName &&
           other.address1 == this.address1 &&
           other.address2 == this.address2 &&
@@ -2140,6 +3078,7 @@ class Party extends DataClass implements Insertable<Party> {
 class PartiesCompanion extends UpdateCompanion<Party> {
   final Value<String> id;
   final Value<String> companyId;
+  final Value<String?> customerMasterId;
   final Value<String> partyName;
   final Value<String?> address1;
   final Value<String?> address2;
@@ -2158,6 +3097,7 @@ class PartiesCompanion extends UpdateCompanion<Party> {
   const PartiesCompanion({
     this.id = const Value.absent(),
     this.companyId = const Value.absent(),
+    this.customerMasterId = const Value.absent(),
     this.partyName = const Value.absent(),
     this.address1 = const Value.absent(),
     this.address2 = const Value.absent(),
@@ -2177,6 +3117,7 @@ class PartiesCompanion extends UpdateCompanion<Party> {
   PartiesCompanion.insert({
     this.id = const Value.absent(),
     required String companyId,
+    this.customerMasterId = const Value.absent(),
     required String partyName,
     this.address1 = const Value.absent(),
     this.address2 = const Value.absent(),
@@ -2197,6 +3138,7 @@ class PartiesCompanion extends UpdateCompanion<Party> {
   static Insertable<Party> custom({
     Expression<String>? id,
     Expression<String>? companyId,
+    Expression<String>? customerMasterId,
     Expression<String>? partyName,
     Expression<String>? address1,
     Expression<String>? address2,
@@ -2216,6 +3158,7 @@ class PartiesCompanion extends UpdateCompanion<Party> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (companyId != null) 'company_id': companyId,
+      if (customerMasterId != null) 'customer_master_id': customerMasterId,
       if (partyName != null) 'party_name': partyName,
       if (address1 != null) 'address1': address1,
       if (address2 != null) 'address2': address2,
@@ -2237,6 +3180,7 @@ class PartiesCompanion extends UpdateCompanion<Party> {
   PartiesCompanion copyWith({
     Value<String>? id,
     Value<String>? companyId,
+    Value<String?>? customerMasterId,
     Value<String>? partyName,
     Value<String?>? address1,
     Value<String?>? address2,
@@ -2256,6 +3200,7 @@ class PartiesCompanion extends UpdateCompanion<Party> {
     return PartiesCompanion(
       id: id ?? this.id,
       companyId: companyId ?? this.companyId,
+      customerMasterId: customerMasterId ?? this.customerMasterId,
       partyName: partyName ?? this.partyName,
       address1: address1 ?? this.address1,
       address2: address2 ?? this.address2,
@@ -2282,6 +3227,9 @@ class PartiesCompanion extends UpdateCompanion<Party> {
     }
     if (companyId.present) {
       map['company_id'] = Variable<String>(companyId.value);
+    }
+    if (customerMasterId.present) {
+      map['customer_master_id'] = Variable<String>(customerMasterId.value);
     }
     if (partyName.present) {
       map['party_name'] = Variable<String>(partyName.value);
@@ -2336,6 +3284,7 @@ class PartiesCompanion extends UpdateCompanion<Party> {
     return (StringBuffer('PartiesCompanion(')
           ..write('id: $id, ')
           ..write('companyId: $companyId, ')
+          ..write('customerMasterId: $customerMasterId, ')
           ..write('partyName: $partyName, ')
           ..write('address1: $address1, ')
           ..write('address2: $address2, ')
@@ -10099,6 +11048,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $CompaniesTable companies = $CompaniesTable(this);
+  late final $CustomerMastersTable customerMasters = $CustomerMastersTable(
+    this,
+  );
   late final $PartiesTable parties = $PartiesTable(this);
   late final $VendorCodesTable vendorCodes = $VendorCodesTable(this);
   late final $SitesTable sites = $SitesTable(this);
@@ -10116,6 +11068,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     companies,
+    customerMasters,
     parties,
     vendorCodes,
     sites,
@@ -10136,6 +11089,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('parties', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'customer_masters',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('parties', kind: UpdateKind.update)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -11525,10 +12485,532 @@ typedef $$CompaniesTableProcessedTableManager =
         bool importBatchesRefs,
       })
     >;
+typedef $$CustomerMastersTableCreateCompanionBuilder =
+    CustomerMastersCompanion Function({
+      Value<String> id,
+      required String ownerUserId,
+      required String partyName,
+      Value<String?> address1,
+      Value<String?> address2,
+      Value<String?> address3,
+      Value<String?> city,
+      Value<String?> state,
+      Value<String?> pincode,
+      Value<String?> pan,
+      Value<String?> gstin,
+      Value<String?> phone,
+      Value<String?> email,
+      Value<bool> isActive,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+typedef $$CustomerMastersTableUpdateCompanionBuilder =
+    CustomerMastersCompanion Function({
+      Value<String> id,
+      Value<String> ownerUserId,
+      Value<String> partyName,
+      Value<String?> address1,
+      Value<String?> address2,
+      Value<String?> address3,
+      Value<String?> city,
+      Value<String?> state,
+      Value<String?> pincode,
+      Value<String?> pan,
+      Value<String?> gstin,
+      Value<String?> phone,
+      Value<String?> email,
+      Value<bool> isActive,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$CustomerMastersTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $CustomerMastersTable, CustomerMaster> {
+  $$CustomerMastersTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$PartiesTable, List<Party>> _partiesRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.parties,
+    aliasName: 'customer_masters__id__parties__customer_master_id',
+  );
+
+  $$PartiesTableProcessedTableManager get partiesRefs {
+    final manager = $$PartiesTableTableManager($_db, $_db.parties).filter(
+      (f) => f.customerMasterId.id.sqlEquals($_itemColumn<String>('id')!),
+    );
+
+    final cache = $_typedResult.readTableOrNull(_partiesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$CustomerMastersTableFilterComposer
+    extends Composer<_$AppDatabase, $CustomerMastersTable> {
+  $$CustomerMastersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get partyName => $composableBuilder(
+    column: $table.partyName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get address1 => $composableBuilder(
+    column: $table.address1,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get address2 => $composableBuilder(
+    column: $table.address2,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get address3 => $composableBuilder(
+    column: $table.address3,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get city => $composableBuilder(
+    column: $table.city,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pincode => $composableBuilder(
+    column: $table.pincode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pan => $composableBuilder(
+    column: $table.pan,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get gstin => $composableBuilder(
+    column: $table.gstin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> partiesRefs(
+    Expression<bool> Function($$PartiesTableFilterComposer f) f,
+  ) {
+    final $$PartiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.parties,
+      getReferencedColumn: (t) => t.customerMasterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartiesTableFilterComposer(
+            $db: $db,
+            $table: $db.parties,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$CustomerMastersTableOrderingComposer
+    extends Composer<_$AppDatabase, $CustomerMastersTable> {
+  $$CustomerMastersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get partyName => $composableBuilder(
+    column: $table.partyName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get address1 => $composableBuilder(
+    column: $table.address1,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get address2 => $composableBuilder(
+    column: $table.address2,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get address3 => $composableBuilder(
+    column: $table.address3,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get city => $composableBuilder(
+    column: $table.city,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pincode => $composableBuilder(
+    column: $table.pincode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pan => $composableBuilder(
+    column: $table.pan,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get gstin => $composableBuilder(
+    column: $table.gstin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CustomerMastersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CustomerMastersTable> {
+  $$CustomerMastersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get partyName =>
+      $composableBuilder(column: $table.partyName, builder: (column) => column);
+
+  GeneratedColumn<String> get address1 =>
+      $composableBuilder(column: $table.address1, builder: (column) => column);
+
+  GeneratedColumn<String> get address2 =>
+      $composableBuilder(column: $table.address2, builder: (column) => column);
+
+  GeneratedColumn<String> get address3 =>
+      $composableBuilder(column: $table.address3, builder: (column) => column);
+
+  GeneratedColumn<String> get city =>
+      $composableBuilder(column: $table.city, builder: (column) => column);
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<String> get pincode =>
+      $composableBuilder(column: $table.pincode, builder: (column) => column);
+
+  GeneratedColumn<String> get pan =>
+      $composableBuilder(column: $table.pan, builder: (column) => column);
+
+  GeneratedColumn<String> get gstin =>
+      $composableBuilder(column: $table.gstin, builder: (column) => column);
+
+  GeneratedColumn<String> get phone =>
+      $composableBuilder(column: $table.phone, builder: (column) => column);
+
+  GeneratedColumn<String> get email =>
+      $composableBuilder(column: $table.email, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> partiesRefs<T extends Object>(
+    Expression<T> Function($$PartiesTableAnnotationComposer a) f,
+  ) {
+    final $$PartiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.parties,
+      getReferencedColumn: (t) => t.customerMasterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.parties,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$CustomerMastersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CustomerMastersTable,
+          CustomerMaster,
+          $$CustomerMastersTableFilterComposer,
+          $$CustomerMastersTableOrderingComposer,
+          $$CustomerMastersTableAnnotationComposer,
+          $$CustomerMastersTableCreateCompanionBuilder,
+          $$CustomerMastersTableUpdateCompanionBuilder,
+          (CustomerMaster, $$CustomerMastersTableReferences),
+          CustomerMaster,
+          PrefetchHooks Function({bool partiesRefs})
+        > {
+  $$CustomerMastersTableTableManager(
+    _$AppDatabase db,
+    $CustomerMastersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CustomerMastersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CustomerMastersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CustomerMastersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> ownerUserId = const Value.absent(),
+                Value<String> partyName = const Value.absent(),
+                Value<String?> address1 = const Value.absent(),
+                Value<String?> address2 = const Value.absent(),
+                Value<String?> address3 = const Value.absent(),
+                Value<String?> city = const Value.absent(),
+                Value<String?> state = const Value.absent(),
+                Value<String?> pincode = const Value.absent(),
+                Value<String?> pan = const Value.absent(),
+                Value<String?> gstin = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<String?> email = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CustomerMastersCompanion(
+                id: id,
+                ownerUserId: ownerUserId,
+                partyName: partyName,
+                address1: address1,
+                address2: address2,
+                address3: address3,
+                city: city,
+                state: state,
+                pincode: pincode,
+                pan: pan,
+                gstin: gstin,
+                phone: phone,
+                email: email,
+                isActive: isActive,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                required String ownerUserId,
+                required String partyName,
+                Value<String?> address1 = const Value.absent(),
+                Value<String?> address2 = const Value.absent(),
+                Value<String?> address3 = const Value.absent(),
+                Value<String?> city = const Value.absent(),
+                Value<String?> state = const Value.absent(),
+                Value<String?> pincode = const Value.absent(),
+                Value<String?> pan = const Value.absent(),
+                Value<String?> gstin = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<String?> email = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CustomerMastersCompanion.insert(
+                id: id,
+                ownerUserId: ownerUserId,
+                partyName: partyName,
+                address1: address1,
+                address2: address2,
+                address3: address3,
+                city: city,
+                state: state,
+                pincode: pincode,
+                pan: pan,
+                gstin: gstin,
+                phone: phone,
+                email: email,
+                isActive: isActive,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CustomerMastersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({partiesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (partiesRefs) db.parties],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (partiesRefs)
+                    await $_getPrefetchedData<
+                      CustomerMaster,
+                      $CustomerMastersTable,
+                      Party
+                    >(
+                      currentTable: table,
+                      referencedTable: $$CustomerMastersTableReferences
+                          ._partiesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$CustomerMastersTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).partiesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.customerMasterId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CustomerMastersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CustomerMastersTable,
+      CustomerMaster,
+      $$CustomerMastersTableFilterComposer,
+      $$CustomerMastersTableOrderingComposer,
+      $$CustomerMastersTableAnnotationComposer,
+      $$CustomerMastersTableCreateCompanionBuilder,
+      $$CustomerMastersTableUpdateCompanionBuilder,
+      (CustomerMaster, $$CustomerMastersTableReferences),
+      CustomerMaster,
+      PrefetchHooks Function({bool partiesRefs})
+    >;
 typedef $$PartiesTableCreateCompanionBuilder =
     PartiesCompanion Function({
       Value<String> id,
       required String companyId,
+      Value<String?> customerMasterId,
       required String partyName,
       Value<String?> address1,
       Value<String?> address2,
@@ -11549,6 +13031,7 @@ typedef $$PartiesTableUpdateCompanionBuilder =
     PartiesCompanion Function({
       Value<String> id,
       Value<String> companyId,
+      Value<String?> customerMasterId,
       Value<String> partyName,
       Value<String?> address1,
       Value<String?> address2,
@@ -11581,6 +13064,24 @@ final class $$PartiesTableReferences
       $_db.companies,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_companyIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CustomerMastersTable _customerMasterIdTable(_$AppDatabase db) => db
+      .customerMasters
+      .createAlias('parties__customer_master_id__customer_masters__id');
+
+  $$CustomerMastersTableProcessedTableManager? get customerMasterId {
+    final $_column = $_itemColumn<String>('customer_master_id');
+    if ($_column == null) return null;
+    final manager = $$CustomerMastersTableTableManager(
+      $_db,
+      $_db.customerMasters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_customerMasterIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -11742,6 +13243,29 @@ class $$PartiesTableFilterComposer
           }) => $$CompaniesTableFilterComposer(
             $db: $db,
             $table: $db.companies,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CustomerMastersTableFilterComposer get customerMasterId {
+    final $$CustomerMastersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.customerMasterId,
+      referencedTable: $db.customerMasters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CustomerMastersTableFilterComposer(
+            $db: $db,
+            $table: $db.customerMasters,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -11933,6 +13457,29 @@ class $$PartiesTableOrderingComposer
     );
     return composer;
   }
+
+  $$CustomerMastersTableOrderingComposer get customerMasterId {
+    final $$CustomerMastersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.customerMasterId,
+      referencedTable: $db.customerMasters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CustomerMastersTableOrderingComposer(
+            $db: $db,
+            $table: $db.customerMasters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$PartiesTableAnnotationComposer
@@ -12003,6 +13550,29 @@ class $$PartiesTableAnnotationComposer
           }) => $$CompaniesTableAnnotationComposer(
             $db: $db,
             $table: $db.companies,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CustomerMastersTableAnnotationComposer get customerMasterId {
+    final $$CustomerMastersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.customerMasterId,
+      referencedTable: $db.customerMasters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CustomerMastersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.customerMasters,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -12103,6 +13673,7 @@ class $$PartiesTableTableManager
           Party,
           PrefetchHooks Function({
             bool companyId,
+            bool customerMasterId,
             bool vendorCodesRefs,
             bool sitesRefs,
             bool invoicesRefs,
@@ -12123,6 +13694,7 @@ class $$PartiesTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> companyId = const Value.absent(),
+                Value<String?> customerMasterId = const Value.absent(),
                 Value<String> partyName = const Value.absent(),
                 Value<String?> address1 = const Value.absent(),
                 Value<String?> address2 = const Value.absent(),
@@ -12141,6 +13713,7 @@ class $$PartiesTableTableManager
               }) => PartiesCompanion(
                 id: id,
                 companyId: companyId,
+                customerMasterId: customerMasterId,
                 partyName: partyName,
                 address1: address1,
                 address2: address2,
@@ -12161,6 +13734,7 @@ class $$PartiesTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 required String companyId,
+                Value<String?> customerMasterId = const Value.absent(),
                 required String partyName,
                 Value<String?> address1 = const Value.absent(),
                 Value<String?> address2 = const Value.absent(),
@@ -12179,6 +13753,7 @@ class $$PartiesTableTableManager
               }) => PartiesCompanion.insert(
                 id: id,
                 companyId: companyId,
+                customerMasterId: customerMasterId,
                 partyName: partyName,
                 address1: address1,
                 address2: address2,
@@ -12206,6 +13781,7 @@ class $$PartiesTableTableManager
           prefetchHooksCallback:
               ({
                 companyId = false,
+                customerMasterId = false,
                 vendorCodesRefs = false,
                 sitesRefs = false,
                 invoicesRefs = false,
@@ -12242,6 +13818,19 @@ class $$PartiesTableTableManager
                                         ._companyIdTable(db),
                                     referencedColumn: $$PartiesTableReferences
                                         ._companyIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (customerMasterId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.customerMasterId,
+                                    referencedTable: $$PartiesTableReferences
+                                        ._customerMasterIdTable(db),
+                                    referencedColumn: $$PartiesTableReferences
+                                        ._customerMasterIdTable(db)
                                         .id,
                                   )
                                   as T;
@@ -12328,6 +13917,7 @@ typedef $$PartiesTableProcessedTableManager =
       Party,
       PrefetchHooks Function({
         bool companyId,
+        bool customerMasterId,
         bool vendorCodesRefs,
         bool sitesRefs,
         bool invoicesRefs,
@@ -17835,6 +19425,8 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$CompaniesTableTableManager get companies =>
       $$CompaniesTableTableManager(_db, _db.companies);
+  $$CustomerMastersTableTableManager get customerMasters =>
+      $$CustomerMastersTableTableManager(_db, _db.customerMasters);
   $$PartiesTableTableManager get parties =>
       $$PartiesTableTableManager(_db, _db.parties);
   $$VendorCodesTableTableManager get vendorCodes =>

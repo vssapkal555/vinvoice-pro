@@ -30,10 +30,18 @@ final invoiceDetailProvider = FutureProvider.family<InvoiceDetailData, String>((
 ) async {
   final db = ref.watch(appDatabaseProvider);
 
-  final invoice = await db.getInvoiceById(invoiceId);
+  final company = await ref.watch(primaryCompanyProvider.future);
+  if (company == null) {
+    throw StateError('Company profile is not configured.');
+  }
+
+  final invoice = await db.getInvoiceByIdForCompany(
+    invoiceId: invoiceId,
+    companyId: company.id,
+  );
 
   if (invoice == null) {
-    throw StateError('Invoice not found.');
+    throw StateError('Invoice not found for the selected company.');
   }
 
   final items = await db.getInvoiceItemsByInvoice(invoiceId);

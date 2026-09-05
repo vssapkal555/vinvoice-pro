@@ -9,6 +9,7 @@ import '../../../core/utils/money_utils.dart';
 import '../models/report_date_range.dart';
 import '../services/report_excel_export_service.dart';
 import '../services/report_pdf_export_service.dart';
+import '../../imports/data/invoice_import_columns.dart';
 import '../../company/providers/company_providers.dart';
 
 class InvoiceReportScreen extends ConsumerStatefulWidget {
@@ -109,45 +110,44 @@ class _InvoiceReportScreenState extends ConsumerState<InvoiceReportScreen> {
   }
 
   Future<void> _exportExcel(List<_InvoiceReportRow> rows) async {
+    final company = await ref.read(primaryCompanyProvider.future);
+    if (company == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a company first.')),
+        );
+      }
+      return;
+    }
+
     final issuedRows =
         rows
-            .where((row) => row.invoice.status.toLowerCase() == 'issued')
+            .where(
+              (row) =>
+                  row.invoice.status.toLowerCase() == 'issued' &&
+                  row.invoice.companyId == company.id,
+            )
             .toList()
           ..sort((a, b) {
-            final companyCompare = a.invoice.companyNameSnapshot
-                .toLowerCase()
-                .compareTo(b.invoice.companyNameSnapshot.toLowerCase());
-            if (companyCompare != 0) {
-              return companyCompare;
-            }
-
             final partyCompare = a.invoice.partyNameSnapshot
                 .toLowerCase()
                 .compareTo(b.invoice.partyNameSnapshot.toLowerCase());
-            if (partyCompare != 0) {
-              return partyCompare;
-            }
-
+            if (partyCompare != 0) return partyCompare;
             final dateCompare = a.invoice.invoiceDate.compareTo(
               b.invoice.invoiceDate,
             );
-            if (dateCompare != 0) {
-              return dateCompare;
-            }
-
+            if (dateCompare != 0) return dateCompare;
             return a.invoice.invoiceNumber.compareTo(b.invoice.invoiceNumber);
           });
 
     if (issuedRows.isEmpty) {
-      if (!mounted) {
-        return;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No issued invoices available to export.'),
+          ),
+        );
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No issued invoices available to export.'),
-        ),
-      );
       return;
     }
 
@@ -162,14 +162,61 @@ class _InvoiceReportScreenState extends ConsumerState<InvoiceReportScreen> {
     for (final reportRow in issuedRows) {
       final invoice = reportRow.invoice;
       final items = await db.getInvoiceItemsByInvoice(invoice.id);
+      if (items.isEmpty) continue;
 
-      // Keep one complete row for every invoice line item.
-      // Common invoice/company/party/tax values are deliberately repeated.
-      final sourceItems = items.isEmpty ? <InvoiceItem?>[null] : items;
+      final baseTotal = items.fold<int>(
+        0,
+        (sum, item) => sum + item.amountPaise,
+      );
+      var taxableUsed = 0;
+      var cgstUsed = 0;
+      var sgstUsed = 0;
+      var igstUsed = 0;
+      var grandUsed = 0;
 
-      for (final item in sourceItems) {
+      int allocation(int total, int itemAmount, int used, bool last) {
+        if (last) return total - used;
+        if (total == 0 || baseTotal == 0) return 0;
+        return (total * itemAmount / baseTotal).round();
+      }
+
+      for (var index = 0; index < items.length; index++) {
+        final item = items[index];
+        final last = index == items.length - 1;
+        final taxable = allocation(
+          invoice.taxableAmountPaise,
+          item.amountPaise,
+          taxableUsed,
+          last,
+        );
+        final cgst = allocation(
+          invoice.cgstAmountPaise,
+          item.amountPaise,
+          cgstUsed,
+          last,
+        );
+        final sgst = allocation(
+          invoice.sgstAmountPaise,
+          item.amountPaise,
+          sgstUsed,
+          last,
+        );
+        final igst = allocation(
+          invoice.igstAmountPaise,
+          item.amountPaise,
+          igstUsed,
+          last,
+        );
+        var grand = item.amountPaise + cgst + sgst + igst;
+        if (last) grand = invoice.grandTotalPaise - grandUsed;
+
+        taxableUsed += taxable;
+        cgstUsed += cgst;
+        sgstUsed += sgst;
+        igstUsed += igst;
+        grandUsed += grand;
+
         exportRows.add([
-          invoice.companyNameSnapshot,
           invoice.partyNameSnapshot,
           invoice.partyAddress1Snapshot ?? '',
           invoice.partyAddress2Snapshot ?? '',
@@ -181,124 +228,47 @@ class _InvoiceReportScreenState extends ConsumerState<InvoiceReportScreen> {
           invoice.poNumber ?? '',
           invoice.vendorCodeSnapshot ?? '',
           invoice.siteNameSnapshot ?? '',
-          invoice.serviceEntry ?? '',
           invoice.serviceFrom == null
               ? ''
               : DateFormat('dd-MM-yyyy').format(invoice.serviceFrom!),
           invoice.serviceTo == null
               ? ''
               : DateFormat('dd-MM-yyyy').format(invoice.serviceTo!),
-          item?.description ?? '',
-          item?.hsnSac ?? '',
-          item == null ? '' : item.quantity.toString(),
-          item?.unitCodeSnapshot ?? '',
-          item == null ? '' : MoneyUtils.paiseToRupeesText(item.ratePaise),
-          item == null ? '' : MoneyUtils.paiseToRupeesText(item.amountPaise),
-          MoneyUtils.paiseToRupeesText(invoice.taxableAmountPaise),
-          MoneyUtils.paiseToRupeesText(invoice.cgstAmountPaise),
-          MoneyUtils.paiseToRupeesText(invoice.sgstAmountPaise),
-          MoneyUtils.paiseToRupeesText(invoice.igstAmountPaise),
-          MoneyUtils.paiseToRupeesText(invoice.grandTotalPaise),
+          item.description,
+          item.hsnSac ?? '',
+          item.quantity.toString(),
+          item.unitCodeSnapshot ?? '',
+          MoneyUtils.paiseToRupeesText(item.ratePaise),
+          MoneyUtils.paiseToRupeesText(item.amountPaise),
+          MoneyUtils.paiseToRupeesText(taxable),
+          MoneyUtils.paiseToRupeesText(cgst),
+          MoneyUtils.paiseToRupeesText(sgst),
+          MoneyUtils.paiseToRupeesText(igst),
+          MoneyUtils.paiseToRupeesText(grand),
+          invoice.serviceEntry ?? '',
         ]);
       }
     }
 
-    final totalTaxable = issuedRows.fold<int>(
-      0,
-      (sum, row) => sum + row.invoice.taxableAmountPaise,
-    );
-    final totalCgst = issuedRows.fold<int>(
-      0,
-      (sum, row) => sum + row.invoice.cgstAmountPaise,
-    );
-    final totalSgst = issuedRows.fold<int>(
-      0,
-      (sum, row) => sum + row.invoice.sgstAmountPaise,
-    );
-    final totalIgst = issuedRows.fold<int>(
-      0,
-      (sum, row) => sum + row.invoice.igstAmountPaise,
-    );
-    final totalGrand = issuedRows.fold<int>(
-      0,
-      (sum, row) => sum + row.invoice.grandTotalPaise,
-    );
-
     try {
       await ReportExcelExportService.exportAndShare(
-        reportTitle: 'Detailed Issued Invoice Export',
-        fileName: 'issued_invoice_details',
+        reportTitle: 'VInvoice Pro Invoice Data',
+        fileName: 'vinvoice_invoice_data_${company.companyName}',
         metadata: [
+          ['VInvoice Format', 'VInvoice Pro Invoice Data v2'],
+          ['Company Name', company.companyName],
+          ['Company GSTIN', company.gstin ?? ''],
+          ['Company PAN', company.pan ?? ''],
           ['Report Period', period],
-          ['Generated', DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())],
           ['Invoice Status', 'ISSUED ONLY'],
-          ['Order', 'Company > Party > Invoice'],
-          ['Structure', 'Every row contains complete invoice and item details'],
+          ['Structure', 'Canonical 25-column item-wise invoice data'],
         ],
-        numericColumns: const {17, 19, 20, 21, 22, 23, 24, 25},
-        headers: const [
-          'Company Name',
-          'Party Name',
-          'Address-1',
-          'Address-2',
-          'Address-3',
-          'PAN',
-          'GST',
-          'Invoice No.',
-          'Invoice Date',
-          'PO No.',
-          'Vendor Code',
-          'Site / Plant',
-          'Service Entry',
-          'Service From',
-          'Service To',
-          'DESCRIPTION OF SERVICE',
-          'HSN/SAC',
-          'QTY',
-          'UNIT',
-          'RATE',
-          'AMOUNT',
-          'TAXABLE AMOUNT',
-          'CGST - 9%',
-          'SGST - 9%',
-          'IGST - 18%',
-          'GRAND TOTAL',
-        ],
+        numericColumns: const {15, 17, 18, 19, 20, 21, 22, 23},
+        headers: InvoiceImportColumns.headers,
         rows: exportRows,
-        totalsRow: [
-          'TOTAL',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-          MoneyUtils.paiseToRupeesText(totalTaxable),
-          MoneyUtils.paiseToRupeesText(totalCgst),
-          MoneyUtils.paiseToRupeesText(totalSgst),
-          MoneyUtils.paiseToRupeesText(totalIgst),
-          MoneyUtils.paiseToRupeesText(totalGrand),
-        ],
       );
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Excel export failed: $error')));

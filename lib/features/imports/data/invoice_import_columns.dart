@@ -26,6 +26,7 @@ class InvoiceImportColumns {
     'SGST - 9%',
     'IGST - 18%',
     'GRAND TOTAL',
+    'Service Entry',
   ];
 
   static const int partyName = 0;
@@ -52,6 +53,8 @@ class InvoiceImportColumns {
   static const int sgst = 21;
   static const int igst = 22;
   static const int grandTotal = 23;
+  static const int serviceEntry = 24;
 
-  static const int columnCount = 24;
+  static const int legacyColumnCount = 24;
+  static const int columnCount = 25;
 }

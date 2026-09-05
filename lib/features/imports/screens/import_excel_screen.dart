@@ -87,7 +87,7 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
       final preview = await parser.parse(
         bytes: bytes,
         fileName: selected.name,
-        companyId: company.id,
+        company: company,
       );
 
       if (!mounted) return;
@@ -99,7 +99,9 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
       });
     } catch (error) {
       if (mounted) {
-        _message('Unable to read Excel file.\n$error');
+        _message(
+          'Unable to read the selected Excel file. Please verify the file and try again.',
+        );
       }
     } finally {
       if (mounted) {
@@ -129,6 +131,49 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
     if (preview.hasFileErrors) {
       _message('Fix the Excel template errors before importing.');
       return;
+    }
+
+    if (!preview.companyIdentityVerified) {
+      final company = await ref.read(primaryCompanyProvider.future);
+      if (!mounted) {
+        return;
+      }
+      if (company == null) {
+        _message('Please configure My Company first.');
+        return;
+      }
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          icon: const Icon(
+            Icons.warning_amber_rounded,
+            color: AppTheme.warning,
+          ),
+          title: const Text('Confirm target company'),
+          content: Text(
+            'This Excel file does not contain verifiable company identity metadata. '
+            'Import it into ${company.companyName}? Only continue if you are sure the file belongs to this company.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Yes, Import Here'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) {
+        return;
+      }
+      if (!mounted) {
+        return;
+      }
     }
 
     final importable = preview.invoices.where(
@@ -338,7 +383,7 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
               _FileIssuesCard(issues: preview.fileIssues),
             ],
 
-            if (preview.duplicateCount > 0) ...[
+            if (!preview.hasFileErrors && preview.duplicateCount > 0) ...[
               const SizedBox(height: 14),
               _DuplicateOptions(
                 duplicateCount: preview.duplicateCount,
@@ -548,6 +593,10 @@ class _PreviewSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visibleDuplicateCount = preview.hasFileErrors
+        ? 0
+        : preview.duplicateCount;
+
     return _ImportSection(
       title: 'Validation Summary',
       icon: Icons.fact_check_outlined,
@@ -570,8 +619,8 @@ class _PreviewSummary extends StatelessWidget {
           ),
           _CountTile(
             title: 'Duplicates',
-            value: preview.duplicateCount,
-            semantic: preview.duplicateCount > 0
+            value: visibleDuplicateCount,
+            semantic: visibleDuplicateCount > 0
                 ? _CountSemantic.warning
                 : _CountSemantic.normal,
           ),

@@ -18,7 +18,7 @@ class InvoiceExcelParser {
   Future<InvoiceImportPreview> parse({
     required Uint8List bytes,
     required String fileName,
-    required String companyId,
+    required Company company,
   }) async {
     final fileIssues = <ImportIssue>[];
 
@@ -53,11 +53,29 @@ class InvoiceExcelParser {
       );
     }
 
-    final headerRow = rows.first;
+    final headerIndex = _findHeaderRowIndex(rows);
 
+    if (headerIndex < 0) {
+      return InvoiceImportPreview(
+        fileName: fileName,
+        invoices: const [],
+        fileIssues: const [
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            message: 'The canonical VInvoice invoice header was not found.',
+          ),
+        ],
+      );
+    }
+
+    final headerRow = rows[headerIndex];
     final headerIssues = _validateHeaders(headerRow);
-
     fileIssues.addAll(headerIssues);
+    final companyIdentityVerified = _validateCompanyMetadata(
+      company: company,
+      metadata: _readMetadata(rows, headerIndex),
+      issues: fileIssues,
+    );
 
     if (headerIssues.any(
       (issue) => issue.severity == ImportIssueSeverity.error,
@@ -73,7 +91,7 @@ class InvoiceExcelParser {
 
     final rejectedRows = <String, List<ImportIssue>>{};
 
-    for (var index = 1; index < rows.length; index++) {
+    for (var index = headerIndex + 1; index < rows.length; index++) {
       final excelRow = index + 1;
 
       final cells = List<String>.generate(InvoiceImportColumns.columnCount, (
@@ -160,6 +178,79 @@ class InvoiceExcelParser {
         amountPaise = (quantity * ratePaise).round();
       }
 
+      final taxablePaise = _parseMoney(
+        cells[InvoiceImportColumns.taxableAmount],
+      );
+      final cgstPaise = _parseMoney(cells[InvoiceImportColumns.cgst]);
+      final sgstPaise = _parseMoney(cells[InvoiceImportColumns.sgst]);
+      final igstPaise = _parseMoney(cells[InvoiceImportColumns.igst]);
+      final grandPaise = _parseMoney(cells[InvoiceImportColumns.grandTotal]);
+
+      if (quantity != null && ratePaise >= 0) {
+        final calculatedAmount = (quantity * ratePaise).round();
+        if ((amountPaise - calculatedAmount).abs() > 1) {
+          issues.add(
+            ImportIssue(
+              severity: ImportIssueSeverity.error,
+              excelRow: excelRow,
+              message: 'AMOUNT must equal QTY × RATE.',
+            ),
+          );
+        }
+      }
+
+      if ((cgstPaise > 0) != (sgstPaise > 0)) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            excelRow: excelRow,
+            message: 'CGST and SGST must be provided together on an item row.',
+          ),
+        );
+      }
+
+      if (igstPaise > 0 && (cgstPaise > 0 || sgstPaise > 0)) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            excelRow: excelRow,
+            message: 'IGST cannot be combined with CGST/SGST on an item row.',
+          ),
+        );
+      }
+
+      final rowHasTax = cgstPaise > 0 || sgstPaise > 0 || igstPaise > 0;
+      if (rowHasTax && (taxablePaise - amountPaise).abs() > 1) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            excelRow: excelRow,
+            message:
+                'Item TAXABLE AMOUNT must match item AMOUNT for taxable invoices.',
+          ),
+        );
+      }
+      if (!rowHasTax && taxablePaise != 0) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.warning,
+            excelRow: excelRow,
+            message: 'A non-taxed item normally has TAXABLE AMOUNT 0.',
+          ),
+        );
+      }
+
+      final calculatedGrand = amountPaise + cgstPaise + sgstPaise + igstPaise;
+      if (grandPaise > 0 && (grandPaise - calculatedGrand).abs() > 1) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            excelRow: excelRow,
+            message: 'Item GRAND TOTAL must equal AMOUNT plus item taxes.',
+          ),
+        );
+      }
+
       if (issues.any((issue) => issue.severity == ImportIssueSeverity.error)) {
         final key = invoiceNumber.isEmpty ? '__ROW_$excelRow' : invoiceNumber;
 
@@ -182,6 +273,7 @@ class InvoiceExcelParser {
           poNumber: cells[InvoiceImportColumns.poNumber].trim(),
           vendorCode: cells[InvoiceImportColumns.vendorCode].trim(),
           sitePlant: cells[InvoiceImportColumns.sitePlant].trim(),
+          serviceEntry: cells[InvoiceImportColumns.serviceEntry].trim(),
           serviceFrom: _parseDate(cells[InvoiceImportColumns.serviceFrom]),
           serviceTo: _parseDate(cells[InvoiceImportColumns.serviceTo]),
           description: description,
@@ -190,13 +282,11 @@ class InvoiceExcelParser {
           unit: cells[InvoiceImportColumns.unit].trim(),
           ratePaise: ratePaise,
           amountPaise: amountPaise,
-          taxableAmountPaise: _parseMoney(
-            cells[InvoiceImportColumns.taxableAmount],
-          ),
-          cgstAmountPaise: _parseMoney(cells[InvoiceImportColumns.cgst]),
-          sgstAmountPaise: _parseMoney(cells[InvoiceImportColumns.sgst]),
-          igstAmountPaise: _parseMoney(cells[InvoiceImportColumns.igst]),
-          grandTotalPaise: _parseMoney(cells[InvoiceImportColumns.grandTotal]),
+          taxableAmountPaise: taxablePaise,
+          cgstAmountPaise: cgstPaise,
+          sgstAmountPaise: sgstPaise,
+          igstAmountPaise: igstPaise,
+          grandTotalPaise: grandPaise,
         ),
       );
     }
@@ -222,20 +312,30 @@ class InvoiceExcelParser {
         (total, row) => total + row.amountPaise,
       );
 
-      final taxable = _firstNonZero(
-        invoiceRows.map((row) => row.taxableAmountPaise),
+      final taxable = invoiceRows.fold<int>(
+        0,
+        (total, row) => total + row.taxableAmountPaise,
       );
 
-      final cgst = _firstNonZero(invoiceRows.map((row) => row.cgstAmountPaise));
-
-      final sgst = _firstNonZero(invoiceRows.map((row) => row.sgstAmountPaise));
-
-      final igst = _firstNonZero(invoiceRows.map((row) => row.igstAmountPaise));
-
-      final grandTotal = _firstNonZero(
-        invoiceRows.map((row) => row.grandTotalPaise),
+      final cgst = invoiceRows.fold<int>(
+        0,
+        (total, row) => total + row.cgstAmountPaise,
       );
 
+      final sgst = invoiceRows.fold<int>(
+        0,
+        (total, row) => total + row.sgstAmountPaise,
+      );
+
+      final igst = invoiceRows.fold<int>(
+        0,
+        (total, row) => total + row.igstAmountPaise,
+      );
+
+      final importedGrandTotal = invoiceRows.fold<int>(
+        0,
+        (total, row) => total + row.grandTotalPaise,
+      );
       if (cgst > 0 && sgst == 0) {
         groupIssues.add(
           const ImportIssue(
@@ -265,7 +365,8 @@ class InvoiceExcelParser {
 
       final expectedTotal = basicAmount + cgst + sgst + igst;
 
-      if (grandTotal > 0 && (grandTotal - expectedTotal).abs() > 1) {
+      if (importedGrandTotal > 0 &&
+          (importedGrandTotal - expectedTotal).abs() > 1) {
         groupIssues.add(
           const ImportIssue(
             severity: ImportIssueSeverity.error,
@@ -285,12 +386,12 @@ class InvoiceExcelParser {
       }
 
       final existingInvoice = await database.getInvoiceByCompanyAndNumber(
-        companyId: companyId,
+        companyId: company.id,
         invoiceNumber: first.invoiceNumber,
       );
 
       final party = await database.findPartyForImport(
-        companyId: companyId,
+        companyId: company.id,
         gstin: first.gst,
         pan: first.pan,
         partyName: first.partyName,
@@ -304,6 +405,24 @@ class InvoiceExcelParser {
                 'No matching Party master was found. A new Party will be created automatically when this invoice is imported.',
           ),
         );
+      }
+
+      if (party != null && first.vendorCode.trim().isNotEmpty) {
+        final vendor = await database.findVendorCodeForImport(
+          companyId: company.id,
+          partyId: party.id,
+        );
+        if (vendor != null &&
+            vendor.vendorCode.trim().toLowerCase() !=
+                first.vendorCode.trim().toLowerCase()) {
+          groupIssues.add(
+            const ImportIssue(
+              severity: ImportIssueSeverity.error,
+              message:
+                  'Vendor Code conflicts with the existing Company + Party mapping.',
+            ),
+          );
+        }
       }
 
       groups.add(
@@ -323,6 +442,7 @@ class InvoiceExcelParser {
       fileName: fileName,
       invoices: groups,
       fileIssues: fileIssues,
+      companyIdentityVerified: companyIdentityVerified,
     );
   }
 
@@ -464,6 +584,103 @@ class InvoiceExcelParser {
     return result;
   }
 
+  int _findHeaderRowIndex(List<List<String>> rows) {
+    for (
+      var rowIndex = 0;
+      rowIndex < rows.length && rowIndex < 30;
+      rowIndex++
+    ) {
+      final row = rows[rowIndex];
+      if (row.length < InvoiceImportColumns.legacyColumnCount) continue;
+
+      var matches = true;
+      for (
+        var column = 0;
+        column < InvoiceImportColumns.legacyColumnCount;
+        column++
+      ) {
+        if (_normalizeHeader(row[column]) !=
+            _normalizeHeader(InvoiceImportColumns.headers[column])) {
+          matches = false;
+          break;
+        }
+      }
+
+      if (matches) return rowIndex;
+    }
+    return -1;
+  }
+
+  Map<String, String> _readMetadata(List<List<String>> rows, int headerIndex) {
+    final result = <String, String>{};
+    for (var index = 0; index < headerIndex; index++) {
+      final row = rows[index];
+      if (row.length < 2) continue;
+      final key = row[0].trim().toUpperCase();
+      final value = row[1].trim();
+      if (key.isNotEmpty && value.isNotEmpty) result[key] = value;
+    }
+    return result;
+  }
+
+  bool _validateCompanyMetadata({
+    required Company company,
+    required Map<String, String> metadata,
+    required List<ImportIssue> issues,
+  }) {
+    final format = metadata['VINVOICE FORMAT'] ?? '';
+    const supportedFormats = {
+      'VInvoice Pro Invoice Data v1',
+      'VInvoice Pro Invoice Data v2',
+    };
+
+    if (format.isNotEmpty && !supportedFormats.contains(format)) {
+      issues.add(
+        ImportIssue(
+          severity: ImportIssueSeverity.error,
+          message: 'Unsupported VInvoice Excel format: $format',
+        ),
+      );
+    }
+
+    final fileGstin = (metadata['COMPANY GSTIN'] ?? '').trim().toUpperCase();
+    final filePan = (metadata['COMPANY PAN'] ?? '').trim().toUpperCase();
+    final fileName = (metadata['COMPANY NAME'] ?? '').trim().toLowerCase();
+    final currentGstin = (company.gstin ?? '').trim().toUpperCase();
+    final currentPan = (company.pan ?? '').trim().toUpperCase();
+    final currentName = company.companyName.trim().toLowerCase();
+
+    bool mismatch = false;
+    if (fileGstin.isNotEmpty && currentGstin.isNotEmpty) {
+      mismatch = fileGstin != currentGstin;
+    } else if (filePan.isNotEmpty && currentPan.isNotEmpty) {
+      mismatch = filePan != currentPan;
+    } else if (fileName.isNotEmpty) {
+      mismatch = fileName != currentName;
+    } else {
+      issues.add(
+        const ImportIssue(
+          severity: ImportIssueSeverity.warning,
+          message:
+              'Company identity metadata is missing. You must explicitly confirm the target company before importing this legacy/manual file.',
+        ),
+      );
+      return false;
+    }
+
+    if (mismatch) {
+      issues.add(
+        ImportIssue(
+          severity: ImportIssueSeverity.error,
+          message:
+              'This Excel file belongs to another company. Current company: ${company.companyName}.',
+        ),
+      );
+    }
+
+    return !mismatch;
+  }
+
   int _columnIndex(String cellReference) {
     final letters = RegExp(r'^[A-Z]+').stringMatch(cellReference.toUpperCase());
 
@@ -483,32 +700,59 @@ class InvoiceExcelParser {
   List<ImportIssue> _validateHeaders(List<String> actual) {
     final issues = <ImportIssue>[];
 
-    if (actual.length < InvoiceImportColumns.columnCount) {
+    if (actual.length < InvoiceImportColumns.legacyColumnCount) {
       issues.add(
         ImportIssue(
           severity: ImportIssueSeverity.error,
           message:
-              'Expected ${InvoiceImportColumns.columnCount} columns but found ${actual.length}.',
+              'Expected at least ${InvoiceImportColumns.legacyColumnCount} columns but found ${actual.length}.',
         ),
       );
-
       return issues;
     }
 
-    for (var i = 0; i < InvoiceImportColumns.columnCount; i++) {
-      final expected = _normalizeHeader(InvoiceImportColumns.headers[i]);
-
-      final found = _normalizeHeader(actual[i]);
-
-      if (expected != found) {
+    for (
+      var index = 0;
+      index < InvoiceImportColumns.legacyColumnCount;
+      index++
+    ) {
+      final expected = InvoiceImportColumns.headers[index];
+      final found = index < actual.length ? actual[index] : '';
+      if (_normalizeHeader(found) != _normalizeHeader(expected)) {
         issues.add(
           ImportIssue(
             severity: ImportIssueSeverity.error,
             message:
-                'Column ${i + 1} must be "${InvoiceImportColumns.headers[i]}", but found "${actual[i]}".',
+                'Column ${index + 1} must be "$expected" but found "$found".',
           ),
         );
       }
+    }
+
+    if (actual.length > InvoiceImportColumns.serviceEntry) {
+      final serviceEntryHeader = actual[InvoiceImportColumns.serviceEntry]
+          .trim();
+      if (serviceEntryHeader.isNotEmpty &&
+          _normalizeHeader(serviceEntryHeader) !=
+              _normalizeHeader(
+                InvoiceImportColumns.headers[InvoiceImportColumns.serviceEntry],
+              )) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            message:
+                'Column ${InvoiceImportColumns.serviceEntry + 1} must be "Service Entry".',
+          ),
+        );
+      }
+    } else {
+      issues.add(
+        const ImportIssue(
+          severity: ImportIssueSeverity.warning,
+          message:
+              'Legacy 24-column format detected. Service Entry will be left blank.',
+        ),
+      );
     }
 
     return issues;
@@ -539,6 +783,80 @@ class InvoiceExcelParser {
             excelRow: row.excelRow,
             message:
                 'Repeated invoice number has different Invoice Date values.',
+          ),
+        );
+      }
+
+      if (row.poNumber.trim().toLowerCase() !=
+          first.poNumber.trim().toLowerCase()) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            excelRow: row.excelRow,
+            message: 'Repeated invoice number has different PO No. values.',
+          ),
+        );
+      }
+
+      if (row.vendorCode.trim().toLowerCase() !=
+          first.vendorCode.trim().toLowerCase()) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            excelRow: row.excelRow,
+            message:
+                'Repeated invoice number has different Vendor Code values.',
+          ),
+        );
+      }
+
+      if (row.sitePlant.trim().toLowerCase() !=
+          first.sitePlant.trim().toLowerCase()) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            excelRow: row.excelRow,
+            message:
+                'Repeated invoice number has different Site / Plant values.',
+          ),
+        );
+      }
+
+      if ((row.serviceFrom == null) != (first.serviceFrom == null) ||
+          (row.serviceFrom != null &&
+              first.serviceFrom != null &&
+              !_sameDate(row.serviceFrom!, first.serviceFrom!))) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            excelRow: row.excelRow,
+            message:
+                'Repeated invoice number has different Service From values.',
+          ),
+        );
+      }
+
+      if ((row.serviceTo == null) != (first.serviceTo == null) ||
+          (row.serviceTo != null &&
+              first.serviceTo != null &&
+              !_sameDate(row.serviceTo!, first.serviceTo!))) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            excelRow: row.excelRow,
+            message: 'Repeated invoice number has different Service To values.',
+          ),
+        );
+      }
+
+      if (row.serviceEntry.trim().toLowerCase() !=
+          first.serviceEntry.trim().toLowerCase()) {
+        issues.add(
+          ImportIssue(
+            severity: ImportIssueSeverity.error,
+            excelRow: row.excelRow,
+            message:
+                'Repeated invoice number has different Service Entry values.',
           ),
         );
       }
@@ -617,16 +935,6 @@ class InvoiceExcelParser {
     }
 
     return null;
-  }
-
-  int _firstNonZero(Iterable<int> values) {
-    for (final value in values) {
-      if (value != 0) {
-        return value;
-      }
-    }
-
-    return 0;
   }
 }
 

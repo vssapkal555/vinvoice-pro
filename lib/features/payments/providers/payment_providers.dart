@@ -15,11 +15,8 @@ final invoicePaymentsProvider = StreamProvider.family<List<Payment>, String>((
   return db.watchPaymentsForInvoice(invoiceId);
 });
 
-final invoicePaymentSummaryProvider =
-    FutureProvider.family<InvoicePaymentSummary, String>((
-      ref,
-      invoiceId,
-    ) async {
+final invoicePaymentSummaryProvider = FutureProvider.autoDispose
+    .family<InvoicePaymentSummary, String>((ref, invoiceId) async {
       final db = ref.watch(appDatabaseProvider);
 
       final invoice = await db.getInvoiceById(invoiceId);

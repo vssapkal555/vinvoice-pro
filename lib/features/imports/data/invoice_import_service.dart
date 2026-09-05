@@ -61,6 +61,40 @@ class InvoiceImportService {
           gstin: first.gst,
         );
 
+        VendorCode? vendorCode;
+        if (first.vendorCode.trim().isNotEmpty) {
+          vendorCode = await database.findVendorCodeForImport(
+            companyId: company.id,
+            partyId: party.id,
+          );
+          if (vendorCode == null) {
+            vendorCode = await database.createVendorCodeFromImport(
+              companyId: company.id,
+              partyId: party.id,
+              vendorCode: first.vendorCode,
+            );
+          } else if (vendorCode.vendorCode.trim().toLowerCase() !=
+              first.vendorCode.trim().toLowerCase()) {
+            throw StateError(
+              'Vendor Code conflicts with the existing Company + Party mapping.',
+            );
+          }
+        }
+
+        Site? site;
+        if (first.sitePlant.trim().isNotEmpty) {
+          site = await database.findSiteForImport(
+            companyId: company.id,
+            partyId: party.id,
+            siteName: first.sitePlant,
+          );
+          site ??= await database.createSiteFromImport(
+            companyId: company.id,
+            partyId: party.id,
+            siteName: first.sitePlant,
+          );
+        }
+
         final invoiceId = existing?.id ?? _importUuid.v4();
 
         final items = <InvoiceItemsCompanion>[];
@@ -93,32 +127,23 @@ class InvoiceImportService {
           0,
           (total, row) => total + row.amountPaise,
         );
-
-        final taxableAmount = _firstNonZero(
-          group.rows.map((row) => row.taxableAmountPaise),
+        final taxableAmount = group.rows.fold<int>(
+          0,
+          (total, row) => total + row.taxableAmountPaise,
         );
-
-        final cgst = _firstNonZero(
-          group.rows.map((row) => row.cgstAmountPaise),
+        final cgst = group.rows.fold<int>(
+          0,
+          (total, row) => total + row.cgstAmountPaise,
         );
-
-        final sgst = _firstNonZero(
-          group.rows.map((row) => row.sgstAmountPaise),
+        final sgst = group.rows.fold<int>(
+          0,
+          (total, row) => total + row.sgstAmountPaise,
         );
-
-        final igst = _firstNonZero(
-          group.rows.map((row) => row.igstAmountPaise),
+        final igst = group.rows.fold<int>(
+          0,
+          (total, row) => total + row.igstAmountPaise,
         );
-
-        final importedGrandTotal = _firstNonZero(
-          group.rows.map((row) => row.grandTotalPaise),
-        );
-
-        final calculatedGrandTotal = basicAmount + cgst + sgst + igst;
-
-        final grandTotal = importedGrandTotal > 0
-            ? importedGrandTotal
-            : calculatedGrandTotal;
+        final grandTotal = basicAmount + cgst + sgst + igst;
 
         final hasTax = cgst > 0 || sgst > 0 || igst > 0;
 
@@ -134,9 +159,9 @@ class InvoiceImportService {
           invoiceNumber: Value(first.invoiceNumber),
           invoiceDate: Value(first.invoiceDate),
           poNumber: Value(_nullable(first.poNumber)),
-          vendorCodeId: const Value(null),
-          siteId: const Value(null),
-          serviceEntry: const Value(null),
+          vendorCodeId: Value(vendorCode?.id),
+          siteId: Value(site?.id),
+          serviceEntry: Value(_nullable(first.serviceEntry)),
           serviceFrom: Value(first.serviceFrom),
           serviceTo: Value(first.serviceTo),
 
@@ -168,9 +193,7 @@ class InvoiceImportService {
           gstMode: Value(gstMode),
 
           basicAmountPaise: Value(basicAmount),
-          taxableAmountPaise: Value(
-            hasTax ? (taxableAmount > 0 ? taxableAmount : basicAmount) : 0,
-          ),
+          taxableAmountPaise: Value(hasTax ? taxableAmount : 0),
 
           cgstRate: Value(cgst > 0 ? 9 : 0),
           cgstAmountPaise: Value(cgst),
@@ -199,9 +222,9 @@ class InvoiceImportService {
               invoiceNumber: first.invoiceNumber,
               invoiceDate: first.invoiceDate,
               poNumber: invoiceCompanion.poNumber,
-              vendorCodeId: const Value(null),
-              siteId: const Value(null),
-              serviceEntry: const Value(null),
+              vendorCodeId: Value(vendorCode?.id),
+              siteId: Value(site?.id),
+              serviceEntry: Value(_nullable(first.serviceEntry)),
               serviceFrom: Value(first.serviceFrom),
               serviceTo: Value(first.serviceTo),
               companyNameSnapshot: company.companyName,
@@ -327,15 +350,5 @@ class InvoiceImportService {
     final text = value?.trim();
 
     return text == null || text.isEmpty ? null : text;
-  }
-
-  static int _firstNonZero(Iterable<int> values) {
-    for (final value in values) {
-      if (value != 0) {
-        return value;
-      }
-    }
-
-    return 0;
   }
 }

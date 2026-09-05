@@ -49,32 +49,9 @@ final primaryCompanyProvider = FutureProvider<Company?>((ref) async {
   return companies.first;
 });
 
-enum SetupStep { company, party, vendorCode, complete }
+enum SetupStep { company, complete }
 
 final setupStepProvider = FutureProvider<SetupStep>((ref) async {
-  final db = ref.watch(appDatabaseProvider);
   final company = await ref.watch(primaryCompanyProvider.future);
-
-  if (company == null) {
-    return SetupStep.company;
-  }
-
-  final parties = await db.getActivePartiesForCompany(company.id);
-
-  if (parties.isEmpty) {
-    return SetupStep.party;
-  }
-
-  for (final party in parties) {
-    final vendor = await db.getVendorCodeForParty(
-      companyId: company.id,
-      partyId: party.id,
-    );
-
-    if (vendor != null) {
-      return SetupStep.complete;
-    }
-  }
-
-  return SetupStep.vendorCode;
+  return company == null ? SetupStep.company : SetupStep.complete;
 });

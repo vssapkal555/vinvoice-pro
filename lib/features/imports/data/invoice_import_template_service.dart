@@ -80,7 +80,7 @@ class InvoiceImportTemplateService {
     await SharePlus.instance.share(
       ShareParams(
         title: 'VInvoice Excel Import Template',
-        text: 'VInvoice Pro historical invoice import template.',
+        text: 'VInvoice Pro canonical 24-column invoice data template.',
         files: [XFile(file.path)],
       ),
     );

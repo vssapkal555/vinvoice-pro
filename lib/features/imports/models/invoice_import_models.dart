@@ -28,6 +28,7 @@ class ParsedInvoiceImportRow {
   final String poNumber;
   final String vendorCode;
   final String sitePlant;
+  final String serviceEntry;
 
   final DateTime? serviceFrom;
   final DateTime? serviceTo;
@@ -60,6 +61,7 @@ class ParsedInvoiceImportRow {
     required this.poNumber,
     required this.vendorCode,
     required this.sitePlant,
+    required this.serviceEntry,
     required this.serviceFrom,
     required this.serviceTo,
     required this.description,
@@ -105,11 +107,13 @@ class InvoiceImportPreview {
   final String fileName;
   final List<ImportInvoiceGroup> invoices;
   final List<ImportIssue> fileIssues;
+  final bool companyIdentityVerified;
 
   const InvoiceImportPreview({
     required this.fileName,
     required this.invoices,
     required this.fileIssues,
+    this.companyIdentityVerified = true,
   });
 
   int get totalInvoices => invoices.length;

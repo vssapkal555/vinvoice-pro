@@ -10,11 +10,13 @@ import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_design_tokens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money_utils.dart';
+import '../../../core/utils/contact_validators.dart';
 import '../data/invoice_calculator.dart';
 import '../models/invoice_form_models.dart';
 import '../providers/edit_invoice_provider.dart';
 import '../../auth/providers/entitlement_write_guard.dart';
 import '../providers/invoice_list_providers.dart';
+import '../../payments/providers/payment_providers.dart';
 
 const _editUuid = Uuid();
 
@@ -66,6 +68,9 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
   Party? _party;
   VendorCode? _vendorCode;
   Site? _site;
+  final List<Party> _sessionParties = [];
+  final List<VendorCode> _sessionVendorCodes = [];
+  final List<Site> _sessionSites = [];
 
   late InvoiceTaxType _taxType;
   late InvoiceGstMode _gstMode;
@@ -194,7 +199,7 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
   List<Site> get _availableSites {
     final party = _party;
     if (party == null) return const [];
-    return widget.data.sites
+    return [...widget.data.sites, ..._sessionSites]
         .where(
           (site) =>
               site.companyId == widget.data.company.id &&
@@ -206,7 +211,7 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
 
   VendorCode? _vendorForParty(Party? party) {
     if (party == null) return null;
-    final matches = widget.data.vendorCodes.where(
+    final matches = [...widget.data.vendorCodes, ..._sessionVendorCodes].where(
       (vendor) =>
           vendor.companyId == widget.data.company.id &&
           vendor.partyId == party.id &&
@@ -369,6 +374,471 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
     });
   }
 
+  Future<void> _addCustomerFromInvoice() async {
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'add a customer',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
+    final db = ref.read(appDatabaseProvider);
+    final company = widget.data.company;
+    final ownerUserId = company.ownerUserId?.trim();
+
+    if (ownerUserId != null && ownerUserId.isNotEmpty) {
+      final available = await db.getAvailableCustomerMastersForCompany(
+        ownerUserId: ownerUserId,
+        companyId: company.id,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      if (available.isNotEmpty) {
+        final action = await showModalBottomSheet<String>(
+          context: context,
+          useSafeArea: true,
+          builder: (sheetContext) => Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Add Customer / Party',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pop(sheetContext, 'existing'),
+                  icon: const Icon(Icons.person_search_rounded),
+                  label: const Text('Use Existing Customer'),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(sheetContext, 'new'),
+                  icon: const Icon(Icons.person_add_alt_1_rounded),
+                  label: const Text('Create New Customer'),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        if (!mounted || action == null) {
+          return;
+        }
+
+        if (action == 'existing') {
+          final reusable = await showModalBottomSheet<CustomerMaster>(
+            context: context,
+            isScrollControlled: true,
+            useSafeArea: true,
+            builder: (sheetContext) => FractionallySizedBox(
+              heightFactor: 0.82,
+              child: Scaffold(
+                appBar: AppBar(title: const Text('Use Existing Customer')),
+                body: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: available.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final customer = available[index];
+                    return Card(
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.business_outlined),
+                        ),
+                        title: Text(customer.partyName),
+                        subtitle: Text(
+                          [
+                            if ((customer.gstin ?? '').trim().isNotEmpty)
+                              'GSTIN ${customer.gstin}',
+                            if ((customer.pan ?? '').trim().isNotEmpty)
+                              'PAN ${customer.pan}',
+                          ].join('  •  '),
+                        ),
+                        trailing: const Icon(Icons.add_circle_outline_rounded),
+                        onTap: () => Navigator.pop(sheetContext, customer),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+
+          if (!mounted || reusable == null) {
+            return;
+          }
+
+          final linked = await db.linkCustomerMasterToCompany(
+            companyId: company.id,
+            customerMasterId: reusable.id,
+          );
+
+          if (!mounted) {
+            return;
+          }
+
+          setState(() {
+            _sessionParties.add(linked);
+            _party = linked;
+            _vendorCode = null;
+            _site = null;
+          });
+          _message('${linked.partyName} added and selected.');
+          return;
+        }
+      }
+    }
+
+    final formKey = GlobalKey<FormState>();
+    var partyName = '';
+    var gstin = '';
+    var pan = '';
+    var phone = '';
+    var email = '';
+
+    final values = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Create New Customer'),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Customer / Party Name',
+                  ),
+                  validator: (value) => (value ?? '').trim().isEmpty
+                      ? 'Customer name is required'
+                      : null,
+                  onChanged: (value) => partyName = value,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'GSTIN (optional)',
+                  ),
+                  onChanged: (value) => gstin = value,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'PAN (optional)',
+                  ),
+                  onChanged: (value) => pan = value,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Mobile (optional)',
+                  ),
+                  validator: ContactValidators.indianMobile,
+                  onChanged: (value) => phone = value,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Email (optional)',
+                  ),
+                  validator: ContactValidators.email,
+                  onChanged: (value) => email = value,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!(formKey.currentState?.validate() ?? false)) {
+                return;
+              }
+              Navigator.pop(dialogContext, {
+                'partyName': partyName.trim(),
+                'gstin': gstin.trim(),
+                'pan': pan.trim(),
+                'phone': phone.trim(),
+                'email': email.trim(),
+              });
+            },
+            child: const Text('Add Customer'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || values == null) {
+      return;
+    }
+
+    Party created;
+    if (ownerUserId != null && ownerUserId.isNotEmpty) {
+      created = await db.createCustomerMasterAndLink(
+        companyId: company.id,
+        ownerUserId: ownerUserId,
+        partyName: values['partyName']!,
+        gstin: values['gstin'],
+        pan: values['pan'],
+        phone: ContactValidators.normalizeIndianMobile(values['phone'] ?? ''),
+        email: ContactValidators.normalizeEmail(values['email'] ?? ''),
+      );
+    } else {
+      final id = _editUuid.v4();
+      await db.insertPartyRecord(
+        PartiesCompanion.insert(
+          id: Value(id),
+          companyId: company.id,
+          partyName: values['partyName']!,
+          gstin: Value(values['gstin']),
+          pan: Value(values['pan']),
+          phone: Value(
+            ContactValidators.normalizeIndianMobile(values['phone'] ?? ''),
+          ),
+          email: Value(ContactValidators.normalizeEmail(values['email'] ?? '')),
+        ),
+      );
+      final parties = await db.getPartiesForCompany(company.id);
+      created = parties.firstWhere((party) => party.id == id);
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _sessionParties.add(created);
+      _party = created;
+      _vendorCode = null;
+      _site = null;
+    });
+    _message('${created.partyName} added and selected.');
+  }
+
+  Future<void> _addVendorCodeForSelectedParty() async {
+    final party = _party;
+    if (party == null) {
+      _message('Select a customer before adding a Vendor Code.');
+      return;
+    }
+
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'create a vendor code',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
+    final formKey = GlobalKey<FormState>();
+    var code = '';
+    var description = '';
+
+    final values = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Vendor Code • ${party.partyName}'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                autofocus: true,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(labelText: 'Vendor Code'),
+                validator: (value) => (value ?? '').trim().isEmpty
+                    ? 'Vendor code is required'
+                    : null,
+                onChanged: (value) => code = value,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                ),
+                onChanged: (value) => description = value,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!(formKey.currentState?.validate() ?? false)) {
+                return;
+              }
+              Navigator.pop(dialogContext, {
+                'code': code.trim(),
+                'description': description.trim(),
+              });
+            },
+            child: const Text('Add Vendor Code'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || values == null) {
+      return;
+    }
+
+    final db = ref.read(appDatabaseProvider);
+    try {
+      await db.insertVendorCodeRecord(
+        VendorCodesCompanion.insert(
+          id: Value(_editUuid.v4()),
+          companyId: widget.data.company.id,
+          partyId: Value(party.id),
+          vendorCode: values['code']!,
+          description: Value(values['description']),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        _message(
+          'Unable to add Vendor Code. It may already exist for this customer.',
+        );
+      }
+      return;
+    }
+
+    final created = await db.getVendorCodeForParty(
+      companyId: widget.data.company.id,
+      partyId: party.id,
+    );
+
+    if (!mounted || created == null) {
+      return;
+    }
+
+    setState(() {
+      _sessionVendorCodes.add(created);
+      _vendorCode = created;
+    });
+    _message('${created.vendorCode} added and selected.');
+  }
+
+  Future<void> _addSiteForSelectedParty() async {
+    final party = _party;
+    if (party == null) {
+      _message('Select a customer before adding a Site / Plant.');
+      return;
+    }
+    if (!await requireEntitlementWriteAccess(
+      context,
+      ref,
+      action: 'create a site / plant',
+    )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
+    var siteNameInput = '';
+    var siteCodeInput = '';
+    final values = await showDialog<List<String>>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add Site / Plant'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              textCapitalization: TextCapitalization.words,
+              onChanged: (value) => siteNameInput = value,
+              decoration: const InputDecoration(labelText: 'Site / Plant Name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              onChanged: (value) => siteCodeInput = value,
+              decoration: const InputDecoration(
+                labelText: 'Site Code (optional)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = siteNameInput.trim();
+              if (name.isEmpty) {
+                return;
+              }
+              FocusScope.of(dialogContext).unfocus();
+              Navigator.pop(dialogContext, [name, siteCodeInput.trim()]);
+            },
+            child: const Text('Save Site'),
+          ),
+        ],
+      ),
+    );
+    if (values == null || !mounted) return;
+
+    final id = _editUuid.v4();
+    final db = ref.read(appDatabaseProvider);
+    await db.insertSiteRecord(
+      SitesCompanion.insert(
+        id: Value(id),
+        companyId: widget.data.company.id,
+        partyId: Value(party.id),
+        siteName: values[0],
+        siteCode: Value(values[1].isEmpty ? null : values[1]),
+      ),
+    );
+    final refreshed = await db.getActiveSitesForParty(
+      companyId: widget.data.company.id,
+      partyId: party.id,
+    );
+    Site? created;
+    for (final site in refreshed) {
+      if (site.id == id) {
+        created = site;
+        break;
+      }
+    }
+    if (!mounted || created == null) return;
+    setState(() {
+      _sessionSites.add(created!);
+      _site = created;
+    });
+    _message('${created.siteName} added and selected.');
+  }
+
   Future<void> _save() async {
     if (!await requireEntitlementWriteAccess(
       context,
@@ -529,6 +999,7 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
       ref.invalidate(allInvoicesProvider);
       ref.invalidate(invoiceDetailProvider(_invoice.id));
       ref.invalidate(editInvoiceProvider(_invoice.id));
+      ref.invalidate(invoicePaymentSummaryProvider(_invoice.id));
 
       if (!mounted) return;
 
@@ -674,11 +1145,18 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
                     child: DropdownButtonFormField<Party>(
                       initialValue: _party,
                       isExpanded: true,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Customer',
-                        prefixIcon: Icon(Icons.business_outlined),
+                        prefixIcon: const Icon(Icons.business_outlined),
+                        suffixIcon: IconButton(
+                          tooltip: 'Add / Link Customer',
+                          onPressed: _addCustomerFromInvoice,
+                          icon: const Icon(Icons.person_add_alt_1_rounded),
+                        ),
                       ),
-                      items: widget.data.parties.map((party) {
+                      items: [...widget.data.parties, ..._sessionParties].map((
+                        party,
+                      ) {
                         return DropdownMenuItem(
                           value: party,
                           child: Text(
@@ -691,7 +1169,7 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
                         final vendor = _vendorForParty(value);
                         final sites = value == null
                             ? <Site>[]
-                            : widget.data.sites
+                            : [...widget.data.sites, ..._sessionSites]
                                   .where(
                                     (site) =>
                                         site.companyId ==
@@ -742,6 +1220,15 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
                             decoration: InputDecoration(
                               labelText: 'Vendor Code',
                               prefixIcon: const Icon(Icons.numbers_rounded),
+                              suffixIcon: IconButton(
+                                tooltip: 'Add Vendor Code',
+                                onPressed: _party == null
+                                    ? null
+                                    : _addVendorCodeForSelectedParty,
+                                icon: const Icon(
+                                  Icons.add_circle_outline_rounded,
+                                ),
+                              ),
                               helperText: _party == null
                                   ? 'Select customer first'
                                   : _vendorCode == null
@@ -761,6 +1248,15 @@ class _EditInvoiceFormState extends ConsumerState<_EditInvoiceForm> {
                               labelText: 'Site / Plant',
                               prefixIcon: const Icon(
                                 Icons.location_on_outlined,
+                              ),
+                              suffixIcon: IconButton(
+                                tooltip: 'Add Site / Plant',
+                                onPressed: _party == null
+                                    ? null
+                                    : _addSiteForSelectedParty,
+                                icon: const Icon(
+                                  Icons.add_location_alt_outlined,
+                                ),
                               ),
                               helperText: _party == null
                                   ? 'Select customer first'
@@ -1280,7 +1776,7 @@ class _EditItemCardState extends State<_EditItemCard> {
                 : CrossFadeState.showSecond,
             secondChild: const SizedBox.shrink(),
             firstChild: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
               child: Column(
                 children: [
                   TextFormField(
